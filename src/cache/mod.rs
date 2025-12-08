@@ -1,5 +1,7 @@
 #[cfg(feature = "rand")]
-use rand::seq::IndexedRandom;
+use rand::seq::IteratorRandom;
+#[cfg(feature = "rand")]
+use crate::cache::grow::grow_pixel_into_box;
 
 use crate::{PixelSet, cache::pixel_box::PixelBox};
 
@@ -51,7 +53,7 @@ impl PixelCache {
 
         let mut boxes = vec![];
         while set.len() > 0 {
-            let &pixel = set.pixels.choose(&mut rng).unwrap();
+            let &pixel = set.iter().choose(&mut rng).unwrap();
             let pixel_box = grow_pixel_into_box(pixel, &set);
             set = set.without(&pixel_box.group());
 
