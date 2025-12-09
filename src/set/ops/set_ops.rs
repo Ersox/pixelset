@@ -25,7 +25,7 @@ impl PixelSet {
         }
     }
 
-    /// Returns a new `PixelSet` representing the union of this set and anothe, with all 
+    /// Returns a new `PixelSet` representing the union of this set and another, with all 
     /// pixels from both sets are included.
     /// 
     /// Complexity: `O(n + m)`.
