@@ -10,7 +10,7 @@
 let mut image: DynamicImage = /* ... */;
 PixelSet::from_image(&image)
     .select(&image, BLACK)
-    .recolor(&mut image, |_| Some(WHITE));
+    .fill(&mut image, WHITE);
 ```
 
 --- 
