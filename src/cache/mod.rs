@@ -8,12 +8,12 @@ use crate::{PixelSet, shapes::{Rectangle, Shape}};
 pub mod grow;
 
 /// A high-performance spatial cache for `PixelSet` data, organized as a
-/// collection of `PixelBox` containers.
+/// collection of `Rectangle` containers.
 ///
 /// ## Overview
 ///
 /// `PixelCache` is designed to store pixels in **spatially contiguous boxes**
-/// (`PixelBox`), making it easily to compactly store continuous sets of
+/// (`Rectangle`), making it easily to compactly store continuous sets of
 /// pixels.
 /// 
 /// A `PixelCache` can be very quickly iterated over, and converted to a
@@ -30,7 +30,7 @@ impl PixelCache {
         Self { boxes: vec![] }
     }
 
-    /// Combines all cached `PixelBox` containers into a single, sorted `PixelSet`.
+    /// Combines all cached `Rectangle` containers into a single, sorted `PixelSet`.
     pub fn group(&self) -> PixelSet {
         let mut pixels = Vec::with_capacity(self.len());
         for rectangle in &self.boxes {

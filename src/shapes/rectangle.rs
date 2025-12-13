@@ -14,7 +14,7 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
-    /// Creates a `PixelBox` that covers a single pixel.
+    /// Creates a `Rectangle` that covers a single pixel.
     pub fn at_pixel(pixel: Pixel) -> Self {
         Self {
             x: pixel.x,
