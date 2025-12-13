@@ -18,6 +18,14 @@ impl PixelSet {
             pixel.set(image, color.into());
         }
     }
+    /// Fills all pixels in the set with a single uniform color.
+    pub fn fill(
+        &self,
+        image: &mut DynamicImage,
+        color: Color
+    ) {
+        self.recolor(image, |_| Some(color));
+    }
 
     /// Reads the color of each pixel from the image, applies a transformation
     /// closure, and writes back a new color if one is produced.

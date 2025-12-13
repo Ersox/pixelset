@@ -1,8 +1,8 @@
-use crate::{PixelSet, Pixel};
+use crate::{Pixel, PixelSet, shapes::Shape};
 
-/// Represents a rectangular area of pixels in an image.
+/// Represents a rectangular shape and its pixels.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct PixelBox {
+pub struct Rectangle {
     /// The x-coordinate of the top-left corner of the box.
     pub x: u16,
     /// The y-coordinate of the top-left corner of the box.
@@ -13,7 +13,7 @@ pub struct PixelBox {
     pub width: u16,
 }
 
-impl PixelBox {
+impl Rectangle {
     /// Creates a `PixelBox` that covers a single pixel.
     pub fn at_pixel(pixel: Pixel) -> Self {
         Self {
@@ -23,9 +23,10 @@ impl PixelBox {
             width: 1,
         }
     }
+}
 
-    /// Generates a `PixelSet` containing all pixels inside the box.
-    pub fn group(&self) -> PixelSet {
+impl Shape for Rectangle {    
+    fn set(&self) -> PixelSet {
         let mut pixels = Vec::with_capacity(self.len());
 
         for y in self.y..(self.y + self.height) {
@@ -37,20 +38,17 @@ impl PixelBox {
         PixelSet::new_unchecked(pixels)
     }
 
-    /// An iterator of pixels in this box.
-    pub fn iter_pixels(&self) -> impl Iterator<Item = Pixel> + '_ {
-        (self.x..self.x + self.width).flat_map(move |x| {
-            (self.y..self.y + self.height).map(move |y| Pixel::new(x, y))
+    fn iter_pixels(&self) -> impl Iterator<Item = Pixel> {
+        (self.y..self.y + self.height).flat_map(move |y| {
+            (self.x..self.x + self.width).map(move |x| Pixel::new(x, y))
         })
     }
 
-    /// Returns the total number of pixels in the box.
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         (self.width * self.height) as usize
     }
 
-    /// Checks if a given pixel is inside the box.
-    pub fn has(&self, pixel: Pixel) -> bool {
+    fn has(&self, pixel: Pixel) -> bool {
         pixel.x >= self.x
             && pixel.x < self.x + self.width
             && pixel.y >= self.y
