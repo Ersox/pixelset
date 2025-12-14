@@ -51,6 +51,14 @@ impl PixelSet {
         Self::new(pixels)
     }
 
+    /// Returns the subset of pixels in this set that are adjacent to another set.
+    ///
+    /// A pixel is included in the result if included in `self`, and adjacent to
+    /// a pixel in `other`.
+    pub fn touching(&self, other: &Self, image: &DynamicImage) -> Self {
+        self.and(&other.neighbors(image))
+    }
+
     /// Returns an iterator over the colors of all pixels in this set when
     /// viewed in the provided image.
     pub fn as_colors(&self, image: &DynamicImage) -> impl Iterator<Item = Color> {
@@ -73,7 +81,7 @@ impl PixelSet {
         let mut a_sum: u64 = 0;
 
         for color in self.as_colors(image) {
-            let [r, g, b, a] = color.0 .0; // depends on your struct, adjust if needed
+            let [r, g, b, a] = color.0.0;
             r_sum += r as u64;
             g_sum += g as u64;
             b_sum += b as u64;
