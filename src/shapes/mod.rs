@@ -2,11 +2,11 @@ use crate::{Pixel, PixelSet};
 
 pub use crate::shapes::rectangle_outline::RectangleOutline;
 pub use crate::shapes::rectangle::Rectangle;
-pub use crate::shapes::circle::Circle;
-pub use crate::shapes::circle_outline::CircleOutline; 
+pub use crate::shapes::ellipse::Ellipse;
+pub use crate::shapes::ellipse_outline::EllipseOutline;
 
-mod circle;
-mod circle_outline;
+mod ellipse;
+mod ellipse_outline;
 mod rectangle;
 mod rectangle_outline;
 
