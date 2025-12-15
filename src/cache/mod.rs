@@ -31,7 +31,7 @@ impl PixelCache {
     }
 
     /// Combines all cached `Rectangle` containers into a single, sorted `PixelSet`.
-    pub fn group(&self) -> PixelSet {
+    pub fn set(&self) -> PixelSet {
         let mut pixels = Vec::with_capacity(self.len());
         for rectangle in &self.boxes {
             pixels.extend(rectangle.iter_pixels());

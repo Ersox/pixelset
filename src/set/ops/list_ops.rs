@@ -62,14 +62,14 @@ impl PixelSet {
         self.filter_color(image, |color| color == query)
     }
 
-    /// Returns a modified copy of the pixel group after applying a
+    /// Returns a modified copy of the `PixelSet` after applying a
     /// user-provided transformation function.
     pub fn apply(
         &self,
         applier: impl Fn(&mut PixelSet)
     ) -> Self {
-        let mut group = self.clone();
-        applier(&mut group);
-        group
+        let mut set = self.clone();
+        applier(&mut set);
+        set
     }
 }

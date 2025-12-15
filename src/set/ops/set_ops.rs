@@ -90,7 +90,7 @@ impl PixelSet {
     }
 
     /// Removes all pixels that appear in `other` from this set, modifying the
-    /// group in-place.
+    /// set in-place.
     /// 
     /// Complexity: `O(n + m)`.
     pub fn remove(&mut self, other: &Self) {
@@ -99,7 +99,7 @@ impl PixelSet {
 
 
     /// Returns a new `PixelSet` containing only the pixels that appear in
-    /// both groups, performing a set intersection.
+    /// both sets, performing a set intersection.
     /// 
     /// Complexity: `O(n + m)`
     pub fn and(&self, other: &Self) -> Self {
