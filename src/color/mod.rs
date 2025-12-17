@@ -3,6 +3,10 @@ use image::Rgba;
 #[cfg(feature = "rand")]
 use rand::{Rng, seq::IteratorRandom};
 
+use crate::color::error::ColorParseError;
+
+mod error;
+
 /// Represents a color with RGBA components.
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct Color(
@@ -21,24 +25,28 @@ impl Color {
     ///
     /// Supports `#RRGGBB` and `#RRGGBBAA` formats. If alpha is omitted,
     /// it defaults to 255 (fully opaque).
-    pub fn hex(hex_code: &str) -> Self {
+    pub fn hex(hex_code: &str) -> Result<Self, ColorParseError> {
         let hex = hex_code.trim_start_matches('#');
 
         if hex.len() != 6 && hex.len() != 8 {
-            panic!("Invalid hex code length");
+            return Err(ColorParseError::InvalidLength(hex.len()));
         }
 
-        let r = u8::from_str_radix(&hex[0..2], 16).expect("Invalid R value");
-        let g = u8::from_str_radix(&hex[2..4], 16).expect("Invalid G value");
-        let b = u8::from_str_radix(&hex[4..6], 16).expect("Invalid B value");
+        let r = u8::from_str_radix(&hex[0..2], 16)
+            .map_err(|e| ColorParseError::InvalidHex("R", e))?;
+        let g = u8::from_str_radix(&hex[2..4], 16)
+            .map_err(|e| ColorParseError::InvalidHex("G", e))?;
+        let b = u8::from_str_radix(&hex[4..6], 16)
+            .map_err(|e| ColorParseError::InvalidHex("B", e))?;
 
         let a = if hex.len() == 8 {
-            u8::from_str_radix(&hex[6..8], 16).expect("Invalid A value")
+            u8::from_str_radix(&hex[6..8], 16)
+                .map_err(|e| ColorParseError::InvalidHex("A", e))?
         } else {
             255
         };
 
-        Self(Rgba([ r, g, b, a ]))
+        Ok(Self(Rgba([r, g, b, a])))
     }
 
     /// Generates a random opaque color.
