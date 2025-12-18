@@ -69,10 +69,9 @@ impl Color {
 
     /// Converts the color to perceptual grayscale.
     pub fn grayscale(self) -> Self {
-        let [ r, g, b, a ] = self.0.map(|el| el as u16);
+        let [ r, g, b, a ] = self.0.map(|el| el as u32);
 
-        // ITU-R BT.709 luminance
-        let luma = (2126 * r + 7152 * g + 722 * b) / 10_000;
+        let luma = ((299 * r) + (587 * g) + (114 * b)) / 1_000;
         let luma = luma as u8;
 
         Self([ luma, luma, luma, a as u8 ])
