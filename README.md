@@ -41,11 +41,12 @@ Adding or removing individual pixels from the set will take `O(n)`, since they h
 ### Set Operations
 
 `PixelSet` provides efficient `O(n)` implementations for the following set operations:
-- Union (`PixelSet::extend`), which provides all elements in either set.
+- Union (`PixelSet::or`), which provides all elements in either set.
 - Intersection (`PixelSet::and`), which provides all elements in both sets.
-- Difference (`PixelSet::without`), which provides all elements from one set, except those of the other.
+- Difference (`PixelSet::difference`), which provides all elements from one set, except those of the other.
+- Symmetric Difference (`PixelSet::xor`), which provides all elements in either set, but not both.
 
-These can be implemented quickly through linear algorithms that take advantage of sorting guarantees.
+These are implemented efficiently through merge algorithms, so performance guarantees can be met.
 
 ### Efficient Caching
 

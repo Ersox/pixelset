@@ -1,24 +1,15 @@
 
-use image::Rgba;
 #[cfg(feature = "rand")]
 use rand::{Rng, seq::IteratorRandom};
 
 use crate::color::error::ColorParseError;
 
 mod error;
+mod from;
 
 /// Represents a color with RGBA components.
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
-pub struct Color(
-    /// The underlying `Rgba<u8>` value.
-    pub Rgba<u8>
-);
-
-impl From<Rgba<u8>> for Color {
-    fn from(value: Rgba<u8>) -> Self {
-        Color(value)
-    }
-}
+pub struct Color(pub [ u8; 4 ]);
 
 impl Color {
     /// Creates a `Color` from a hexadecimal color code.
@@ -46,7 +37,7 @@ impl Color {
             255
         };
 
-        Ok(Self(Rgba([r, g, b, a])))
+        Ok(Self([r, g, b, a]))
     }
 
     /// Generates a random opaque color.
@@ -73,9 +64,20 @@ impl Color {
             ((self.0[3] as u16 * inv_a + color.0[3] as u16 * a) / 255) as u8,
         ];
 
-        Self(Rgba(blended))
+        Self(blended)
+    }
+
+    /// Converts the color to perceptual grayscale.
+    pub fn grayscale(self) -> Self {
+        let [ r, g, b, a ] = self.0.map(|el| el as u16);
+
+        // ITU-R BT.709 luminance
+        let luma = (2126 * r + 7152 * g + 722 * b) / 10_000;
+        let luma = luma as u8;
+
+        Self([ luma, luma, luma, a as u8 ])
     }
 }
 
-pub const BLACK: Color = Color(Rgba([ 0, 0, 0, 255 ]));
-pub const WHITE: Color = Color(Rgba([ 255, 255, 255, 255 ]));
+pub const BLACK: Color = Color([ 0, 0, 0, 255 ]);
+pub const WHITE: Color = Color([ 255, 255, 255, 255 ]);

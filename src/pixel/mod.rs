@@ -54,14 +54,12 @@ impl Pixel {
 
     /// Retrieves the color of this pixel from the provided `DynamicImage`.
     pub fn color(self, image: &DynamicImage) -> Color {
-        Color(
-            image.get_pixel(self.x as u32, self.y as u32)
-        )
+        image.get_pixel(self.x as u32, self.y as u32).into()
     }
 
     /// Sets the color of this pixel in the given image.
     pub fn set(self, image: &mut DynamicImage, color: Color) {
-        image.put_pixel(self.x as u32, self.y as u32, color.0);
+        image.put_pixel(self.x as u32, self.y as u32, color.into());
     }
 
     /// Returns a `PixelSet` containing all valid neighboring pixels around

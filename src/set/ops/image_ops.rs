@@ -28,17 +28,27 @@ impl PixelSet {
     }
 
     /// Reads the color of each pixel from the image, applies a transformation
-    /// closure, and writes back a new color if one is produced.
-    pub fn transform<T : Into<Color>>(
+    /// closure, and writes back a new color.
+    pub fn transform(
         &self, 
         image: &mut DynamicImage,
-        applier: impl Fn(Color) -> Option<T>
+        applier: impl Fn(Color) -> Color
     ) {
         for &pixel in self {
             let found_color = pixel.color(&image);
-            let Some(color) = applier(found_color) else { continue; };
-            pixel.set(image, color.into());
+            let new_color = applier(found_color);
+
+            if new_color == found_color { continue; }
+            pixel.set(image, new_color);
         }
+    }
+
+    /// Returns a `PixelSet` of all pixels that have at least one neighbor 
+    /// outside the set.
+    pub fn outline(&self, image: &DynamicImage) -> Self {
+        self.filter(|pixel| 
+            pixel.neighbors(image).iter().any(|&neighbor| !self.has(neighbor))
+        )
     }
 
     /// Returns a `PixelSet` representing all 8-connected neighbors of all
@@ -81,7 +91,7 @@ impl PixelSet {
         let mut a_sum: u64 = 0;
 
         for color in self.as_colors(image) {
-            let [r, g, b, a] = color.0.0;
+            let Color([ r, g, b, a ]) = color;
             r_sum += r as u64;
             g_sum += g as u64;
             b_sum += b as u64;
@@ -90,13 +100,13 @@ impl PixelSet {
 
         let len = self.len() as u64;
 
-        let avg = image::Rgba([
+        let avg = [
             (r_sum / len) as u8,
             (g_sum / len) as u8,
             (b_sum / len) as u8,
             (a_sum / len) as u8,
-        ]);
+        ];
 
-        Some(Color(avg))
+        Some(avg.into())
     }
 }

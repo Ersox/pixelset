@@ -16,13 +16,6 @@ impl PixelSet {
         self.pixels.binary_search(&pixel).is_ok()
     }
 
-    /// Returns `true` if every pixel in this set is also present in `other`.
-    ///
-    /// Complexity: `O(n log m)`.
-    pub fn is_subset(&self, other: &PixelSet) -> bool {
-        self.into_iter().all(|pixel| other.has(*pixel))
-    }
-
     /// Returns the number of pixels in this set.
     pub fn len(&self) -> usize {
         self.pixels.len()
@@ -48,7 +41,7 @@ impl PixelSet {
     ) -> Self {
         self.filter(|pixel| {
             let color = image.get_pixel(pixel.x as u32, pixel.y as u32);
-            predicate(Color(color))
+            predicate(color.into())
         })
     }
 
