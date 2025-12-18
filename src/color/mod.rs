@@ -43,12 +43,12 @@ impl Color {
     /// Generates a random opaque color.
     #[cfg(feature = "rand")]
     pub fn random(rng: &mut impl Rng) -> Self {
-        Self(Rgba([
+        Self([
             (0..=255).choose(rng).unwrap(),
             (0..=255).choose(rng).unwrap(),
             (0..=255).choose(rng).unwrap(),
             255
-        ]))
+        ])
     }
 
     /// Blends `self` with another `color` using an `opacity` from 0-255.

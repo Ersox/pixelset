@@ -54,7 +54,7 @@ impl PixelCache {
         while set.len() > 0 {
             let &pixel = set.iter().choose(&mut rng).unwrap();
             let rectangle = grow_pixel_into_box(pixel, &set);
-            set = set.without(&rectangle.set());
+            set = set.difference(&rectangle.set());
 
             rectangles.push(rectangle);
         }
