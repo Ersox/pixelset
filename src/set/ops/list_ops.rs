@@ -21,21 +21,26 @@ impl PixelSet {
         self.pixels.len()
     }
 
-    /// Returns a new `PixelSet` containing pixels whose colors in the given image
-    /// satisfy a predicate.
+    /// Returns a new `PixelSet` containing only pixels that satisfy the given predicate.
+    ///
+    /// The predicate function receives each pixel and should return `true` to include it
+    /// in the result, or `false` to exclude it. This is useful for filtering pixels based
+    /// on spatial properties or computed conditions.
     pub fn filter(&self, predicate: impl Fn(Pixel) -> bool) -> Self {
         Self::new_unchecked(
             self.pixels.iter()
-                .filter(|&&pixel| predicate(pixel))
-                .map(|pixel| *pixel)
+                .copied()
+                .filter(|&pixel| predicate(pixel))
                 .collect()
         )
     }
-    
-    /// Returns a new `PixelSet` containing only pixels whose color in the given image
-    /// exactly matches the specified color.
+
+    /// Returns a new `PixelSet` containing only pixels whose colors satisfy the given predicate.
+    ///
+    /// For each pixel in the set, this method reads its color from the image and passes it
+    /// to the predicate function. Pixels whose colors return `true` are included in the result.
     pub fn filter_color(
-        &self, 
+        &self,
         image: &DynamicImage,
         predicate: impl Fn(Color) -> bool
     ) -> Self {
@@ -45,8 +50,10 @@ impl PixelSet {
         })
     }
 
-    /// Returns a new `PixelSet` containing only those pixels whose color in
-    /// the provided image exactly matches the specified color.
+    /// Returns a new `PixelSet` containing only pixels whose color in the provided image
+    /// exactly equals the query color.
+    ///
+    /// This performs exact RGBA matching; colors must match on all four channels.
     pub fn select(
         &self,
         image: &DynamicImage,
@@ -55,8 +62,11 @@ impl PixelSet {
         self.filter_color(image, |color| color == query)
     }
 
-    /// Returns a modified copy of the `PixelSet` after applying a
-    /// user-provided transformation function.
+    /// Returns a modified copy of this `PixelSet` after applying a transformation function.
+    ///
+    /// The provided function receives a mutable reference to a cloned copy of this set,
+    /// allowing in-place mutations like `add()`, `discard()`, etc. The mutated copy is returned.
+    /// The original set is left unchanged.
     pub fn apply(
         &self,
         applier: impl Fn(&mut PixelSet)

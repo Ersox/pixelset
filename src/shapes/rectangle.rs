@@ -1,6 +1,15 @@
 use crate::{Pixel, PixelSet, shapes::Shape};
 
-/// Represents a rectangular shape and its pixels.
+/// Represents an axis-aligned filled rectangle with its pixels.
+///
+/// A rectangle is defined by its top-left corner `(x, y)` and dimensions `(width, height)`.
+/// It includes all pixels within the bounds, from `(x, y)` to `(x + width - 1, y + height - 1)`.
+///
+/// ## Behavior
+///
+/// - A rectangle with zero width or height contains no pixels
+/// - Pixel coordinates are inclusive of the starting corner and exclusive of the far edge
+/// - The shape is immutable and all coordinates use unsigned 16-bit integers
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Rectangle {
     /// The x-coordinate of the top-left corner of the box.

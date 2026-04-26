@@ -1,6 +1,23 @@
 use crate::{Pixel, PixelSet, shapes::Shape};
 
-/// Represents a rectangular outline and its pixels.
+/// Represents a rectangular border with adjustable stroke width.
+///
+/// A rectangle outline is the border of an axis-aligned rectangle, defined by its
+/// top-left corner `(x, y)`, dimensions `(width, height)`, and stroke thickness.
+///
+/// ## Stroke Behavior
+///
+/// The `stroke` parameter defines the thickness of the border in pixels, measured inward
+/// from the outer edges. A pixel is included if it's:
+/// - Within the outer rectangle bounds, AND
+/// - Not within the inner rectangle (which is shrunk by `stroke` on all sides)
+///
+/// ## Edge Cases
+///
+/// - If `stroke * 2 >= width` or `stroke * 2 >= height`, the inner rectangle vanishes
+///   and the entire outer rectangle is included (solid rectangle)
+/// - A stroke of 0 produces an empty outline
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct RectangleOutline {
     /// The x-coordinate of the top-left corner of the box.
     pub x: u16,

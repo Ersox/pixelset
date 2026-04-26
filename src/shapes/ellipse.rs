@@ -1,6 +1,21 @@
 use crate::{Pixel, PixelSet, shapes::Shape};
 
-/// Represents a filled ellipse inside a bounding box.
+/// Represents a filled ellipse within a bounding box.
+///
+/// An ellipse is defined by its axis-aligned bounding box with top-left corner `(x, y)`
+/// and dimensions `(width, height)`. The ellipse is computed using the standard ellipse
+/// equation, testing each pixel's distance from the center.
+///
+/// ## Precision
+///
+/// Pixels are included in the ellipse if their center (at `pixel_coord + 0.5`) satisfies
+/// the ellipse equation `(dx² / rx²) + (dy² / ry²) ≤ 1.0`, where `(rx, ry)` are the
+/// semi-axes of the ellipse.
+///
+/// ## Edge Cases
+///
+/// - Zero width or height results in an empty ellipse
+/// - The actual pixel count may differ from the mathematical area due to discrete sampling
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Ellipse {
     /// Top-left x of the bounding box

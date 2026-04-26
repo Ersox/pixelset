@@ -47,6 +47,26 @@ impl Stretch {
     }
 }
 
+/// Grows a single pixel into the largest possible axis-aligned rectangle.
+///
+/// Starting from a seed pixel, this function expands a rectangle in four directions
+/// (left, right, up, down) as long as all newly added pixels belong to the provided
+/// `PixelSet`. Expansion stops in a direction once a pixel is found outside the set.
+///
+/// This is a greedy algorithm that produces an axis-aligned rectangle; it does not
+/// guarantee an optimal decomposition, but works well for compact rectangular regions.
+///
+/// ## Complexity
+///
+/// The expansion continues until all directions are blocked, which can be `O(n)`
+/// in the worst case where `n` is the size of the PixelSet.
+///
+/// ## Use Case
+///
+/// This function is primarily used by [`PixelCache::generate_from_set`] to decompose
+/// a PixelSet into rectangular regions for more compact storage.
+///
+/// [`PixelCache::generate_from_set`]: crate::PixelCache::generate_from_set
 pub fn grow_pixel_into_box(
     pixel: Pixel,
     set: &PixelSet

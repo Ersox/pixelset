@@ -1,6 +1,26 @@
 use crate::{Pixel, PixelSet, shapes::Shape};
 
-/// Represents an ellipse outline with a given stroke thickness.
+/// Represents an ellipse border with adjustable stroke width.
+///
+/// An ellipse outline is the border of an ellipse defined by its axis-aligned bounding box
+/// and stroke thickness. The border is computed by testing membership in both the outer and
+/// inner ellipses using the standard ellipse equation.
+///
+/// ## Stroke Behavior
+///
+/// The `stroke` parameter defines the thickness of the border, measured inward from the
+/// outer ellipse edge. A pixel is included if it's:
+/// - Within the outer ellipse bounds, AND
+/// - Not within the inner ellipse (which is shrunk by `stroke` on all sides)
+///
+/// ## Edge Cases
+///
+/// - If `stroke * 2 >= width` or `stroke * 2 >= height`, the inner ellipse vanishes
+///   and the entire outer ellipse is included (solid ellipse)
+/// - A stroke of 0 produces an empty outline
+/// - Like [`Ellipse`], precision follows the same ellipse equation with pixel centers at `coord + 0.5`
+///
+/// [`Ellipse`]: crate::shapes::Ellipse
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct EllipseOutline {
     /// Top-left x of the bounding box

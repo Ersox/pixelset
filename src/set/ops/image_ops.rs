@@ -3,13 +3,15 @@ use image::DynamicImage;
 use crate::{Color, Pixel, PixelSet};
 
 impl PixelSet {
-    /// Applies a color-producing function to each pixel and writes the resulting
-    /// color into the image.
+    /// Applies a color-producing function to each pixel and writes the result to the image.
     ///
-    /// The closure may return `None` to indicate that a pixel's color should
-    /// remain unchanged.  
+    /// For each pixel in this set, the function is called with the pixel's coordinates.
+    /// If it returns `Some(color)`, that color is written to the image at the pixel's
+    /// location. If it returns `None`, the pixel's color is left unchanged.
+    ///
+    /// The color value is converted via `Into<Color>`, allowing flexibility in input types.
     pub fn recolor<T : Into<Color>>(
-        &self, 
+        &self,
         image: &mut DynamicImage,
         applier: impl Fn(Pixel) -> Option<T>
     ) {
@@ -18,7 +20,10 @@ impl PixelSet {
             pixel.set(image, color.into());
         }
     }
-    /// Fills all pixels in the set with a single uniform color.
+
+    /// Fills all pixels in this set with a single uniform color.
+    ///
+    /// Every pixel in the set is set to the provided color, overwriting any previous color.
     pub fn fill(
         &self,
         image: &mut DynamicImage,
@@ -27,10 +32,14 @@ impl PixelSet {
         self.recolor(image, |_| Some(color));
     }
 
-    /// Reads the color of each pixel from the image, applies a transformation
-    /// closure, and writes back a new color.
+    /// Reads each pixel's color from the image, applies a transformation function,
+    /// and writes the new color back.
+    ///
+    /// For each pixel, this reads its current color, passes it through the transformation
+    /// function, and writes the result back only if the color changed. This is useful
+    /// for operations like inversion, brightness adjustment, or color space conversions.
     pub fn transform(
-        &self, 
+        &self,
         image: &mut DynamicImage,
         applier: impl Fn(Color) -> Color
     ) {
@@ -43,16 +52,26 @@ impl PixelSet {
         }
     }
 
-    /// Returns a `PixelSet` of all pixels that have at least one neighbor 
-    /// outside the set.
+    /// Returns all pixels on the boundary of this set (pixels with neighbors outside the set).
+    ///
+    /// A pixel is included in the result if it belongs to this set and has at least one
+    /// 8-connected neighbor outside the set (or outside the image bounds). This is useful
+    /// for edge detection, stroke rendering, or isolation of region boundaries.
+    ///
+    /// The result is a subset of this set (no new pixels are added).
     pub fn outline(&self, image: &DynamicImage) -> Self {
-        self.filter(|pixel| 
+        self.filter(|pixel|
             pixel.neighbors(image).iter().any(|&neighbor| !self.has(neighbor))
         )
     }
 
-    /// Returns a `PixelSet` representing all 8-connected neighbors of all
-    /// pixels in this set, constrained to the image bounds.
+    /// Returns all 8-connected neighbors of all pixels in this set.
+    ///
+    /// For each pixel in this set, all of its valid 8-connected neighbors (within image bounds)
+    /// are collected into a new set. The result may include pixels from the original set if
+    /// they are neighbors of other pixels. Duplicates are automatically removed.
+    ///
+    /// This is useful for flood-fill algorithms, dilation operations, or spatial expansion.
     pub fn neighbors(&self, image: &DynamicImage) -> Self {
         let pixels: Vec<_> = self.pixels.iter()
             .flat_map(|pixel| pixel.neighbors(image))
@@ -61,25 +80,34 @@ impl PixelSet {
         Self::new(pixels)
     }
 
-    /// Returns the subset of pixels in this set that are adjacent to another set.
+    /// Returns pixels in this set that are adjacent to pixels in another set.
     ///
-    /// A pixel is included in the result if included in `self`, and adjacent to
-    /// a pixel in `other`.
+    /// A pixel is included in the result if:
+    /// - It belongs to this set (`self`), AND
+    /// - It has at least one 8-connected neighbor in `other`
+    ///
+    /// This is useful for finding contact regions between two regions or detecting
+    /// when two sets touch.
     pub fn touching(&self, other: &Self, image: &DynamicImage) -> Self {
         self.and(&other.neighbors(image))
     }
 
-    /// Returns an iterator over the colors of all pixels in this set when
-    /// viewed in the provided image.
+    /// Returns an iterator over the colors of all pixels in this set.
+    ///
+    /// For each pixel in this set (in `(y, x)` sorted order), the color is read from
+    /// the provided image and yielded. This is a convenience method for operations
+    /// that need to inspect or analyze the actual color data.
     pub fn as_colors(&self, image: &DynamicImage) -> impl Iterator<Item = Color> {
         self.into_iter()
             .map(|pixel| pixel.color(image))
     }
 
-    /// Computes the average color of all pixels in the set when sampled from
-    /// the given image.
+    /// Computes the average RGBA color of all pixels in this set.
     ///
-    /// Returns `None` if the set is empty.  
+    /// Each of the four channels (R, G, B, A) is independently averaged. Integer division
+    /// is used, potentially losing precision in the least significant bit.
+    ///
+    /// Returns `None` if the set is empty.
     pub fn mean_color(&self, image: &DynamicImage) -> Option<Color> {
         if self.is_empty() {
             return None;
