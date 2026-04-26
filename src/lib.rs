@@ -90,9 +90,11 @@ mod cache;
 mod set;
 pub mod shapes;
 pub mod color;
+pub mod direction;
 
 pub use pixel::Pixel;
 pub use color::Color;
 pub use cache::PixelCache;
 pub use set::PixelSet;
 pub use shapes::Shape;
+pub use direction::Direction;
