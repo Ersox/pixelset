@@ -88,6 +88,7 @@
 mod pixel;
 mod cache;
 mod set;
+mod polygon_set;
 pub mod shapes;
 pub mod color;
 pub mod direction;
@@ -96,5 +97,6 @@ pub use pixel::Pixel;
 pub use color::Color;
 pub use cache::PixelCache;
 pub use set::PixelSet;
+pub use polygon_set::PolygonSet;
 pub use shapes::Shape;
 pub use direction::Direction;

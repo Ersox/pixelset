@@ -44,4 +44,15 @@ impl PixelSet {
 
         Self::new_unchecked(pixels)
     }
+
+    /// Encodes this `PixelSet` as a `PolygonSet` for compact storage.
+    ///
+    /// The resulting `PolygonSet` compresses the pixel data by storing only
+    /// the boundaries of connected components, achievable without loss of
+    /// information. Compression ratio depends on the shape: compact regions
+    /// like circles or solid rectangles yield 100–1,000x compression, while
+    /// regions with complex perimeters yield 50–200x.
+    pub fn to_polygon_set(&self) -> crate::PolygonSet {
+        crate::PolygonSet::from_pixel_set(self)
+    }
 }
