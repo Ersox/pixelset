@@ -91,7 +91,7 @@ mod set;
 pub mod shapes;
 pub mod color;
 pub mod direction;
-pub mod rectangle_set;
+pub mod compression;
 
 pub use pixel::Pixel;
 pub use color::Color;
@@ -99,4 +99,4 @@ pub use cache::PixelCache;
 pub use set::PixelSet;
 pub use shapes::Shape;
 pub use direction::Direction;
-pub use rectangle_set::{RectangleSet, Rectangle};
+pub use compression::CompressedPixelSet;

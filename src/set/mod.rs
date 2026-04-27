@@ -3,6 +3,7 @@ use crate::Pixel;
 mod ops;
 mod new;
 mod iter;
+mod compress;
 
 /// A compact, sorted collection of pixels, optimized for fast set-like
 /// operations and spatial queries.

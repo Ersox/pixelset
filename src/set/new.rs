@@ -45,14 +45,4 @@ impl PixelSet {
         Self::new_unchecked(pixels)
     }
 
-    /// Encodes this `PixelSet` as a `RectangleSet` for compact storage.
-    ///
-    /// The resulting `RectangleSet` compresses the pixel data using greedy
-    /// rectangle packing, achieving significant compression for regular shapes.
-    /// Each rectangle stores 4 `u16` values (8 bytes), compared to 4 bytes per pixel.
-    /// Compression ratio depends on the shape: solid rectangles yield 5,000x+ compression,
-    /// while complex or scattered regions may yield 10–50x.
-    pub fn to_rectangle_set(&self) -> crate::RectangleSet {
-        crate::RectangleSet::from_pixel_set(self)
-    }
 }
