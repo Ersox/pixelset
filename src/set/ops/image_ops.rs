@@ -44,7 +44,7 @@ impl PixelSet {
         applier: impl Fn(Color) -> Color
     ) {
         for &pixel in self {
-            let found_color = pixel.color(&image);
+            let found_color = pixel.color(image);
             let new_color = applier(found_color);
 
             if new_color == found_color { continue; }
@@ -119,11 +119,10 @@ impl PixelSet {
         let mut a_sum: u64 = 0;
 
         for color in self.as_colors(image) {
-            let Color([ r, g, b, a ]) = color;
-            r_sum += r as u64;
-            g_sum += g as u64;
-            b_sum += b as u64;
-            a_sum += a as u64;
+            r_sum += color.r() as u64;
+            g_sum += color.g() as u64;
+            b_sum += color.b() as u64;
+            a_sum += color.a() as u64;
         }
 
         let len = self.len() as u64;

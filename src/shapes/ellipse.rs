@@ -79,6 +79,6 @@ impl Shape for Ellipse {
 
     fn len(&self) -> usize {
         // Cheap upper bound; exact count requires scanning anyway
-        (self.width as usize * self.height as usize)
+        self.width as usize * self.height as usize
     }
 }

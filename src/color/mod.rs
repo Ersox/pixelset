@@ -1,7 +1,3 @@
-
-#[cfg(feature = "rand")]
-use rand::{Rng, seq::IteratorRandom};
-
 use crate::color::error::ColorParseError;
 
 mod error;
@@ -9,9 +5,14 @@ mod from;
 
 /// Represents a color with RGBA components.
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
-pub struct Color(pub [ u8; 4 ]);
+pub struct Color([ u8; 4 ]);
 
 impl Color {
+    /// Creates a `Color` from RGBA components.
+    pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self([r, g, b, a])
+    }
+
     /// Creates a `Color` from a hexadecimal color code.
     ///
     /// Supports `#RRGGBB` and `#RRGGBBAA` formats. If alpha is omitted,
@@ -38,20 +39,6 @@ impl Color {
         };
 
         Ok(Self([r, g, b, a]))
-    }
-
-    /// Generates a random fully opaque color.
-    ///
-    /// Each RGB channel is randomly selected from 0-255, and the alpha channel
-    /// is always set to 255 (fully opaque). Requires the `rand` feature.
-    #[cfg(feature = "rand")]
-    pub fn random(rng: &mut impl Rng) -> Self {
-        Self([
-            (0..=255).choose(rng).unwrap(),
-            (0..=255).choose(rng).unwrap(),
-            (0..=255).choose(rng).unwrap(),
-            255
-        ])
     }
 
     /// Linearly interpolates between `self` and another color based on opacity.
@@ -86,10 +73,51 @@ impl Color {
 
         Self([ luma, luma, luma, a as u8 ])
     }
+
+    /// Returns the red channel value.
+    pub fn r(self) -> u8 {
+        self.0[0]
+    }
+
+    /// Returns the green channel value.
+    pub fn g(self) -> u8 {
+        self.0[1]
+    }
+
+    /// Returns the blue channel value.
+    pub fn b(self) -> u8 {
+        self.0[2]
+    }
+
+    /// Returns the alpha channel value.
+    pub fn a(self) -> u8 {
+        self.0[3]
+    }
+
+    /// Returns `true` if the color is fully opaque (alpha == 255).
+    pub fn is_opaque(self) -> bool {
+        self.0[3] == 255
+    }
+
+    /// Returns `true` if the color is grayscale (R == G == B).
+    pub fn is_grayscale(self) -> bool {
+        self.0[0] == self.0[1] && self.0[1] == self.0[2]
+    }
+
+    /// Returns a new color with the same RGB values but a different alpha channel.
+    pub fn with_alpha(self, a: u8) -> Self {
+        Self([self.0[0], self.0[1], self.0[2], a])
+    }
+
+    /// Returns the color with inverted RGB channels (R, G, B become 255-R, 255-G, 255-B).
+    /// The alpha channel is preserved.
+    pub fn invert(self) -> Self {
+        Self([255 - self.0[0], 255 - self.0[1], 255 - self.0[2], self.0[3]])
+    }
 }
 
-/// Pure black with full opacity (RGBA: 0, 0, 0, 255).
-pub const BLACK: Color = Color([ 0, 0, 0, 255 ]);
+/// Pure black with full opacity.
+pub const BLACK: Color = Color::new(0, 0, 0, 255);
 
-/// Pure white with full opacity (RGBA: 255, 255, 255, 255).
-pub const WHITE: Color = Color([ 255, 255, 255, 255 ]);
+/// Pure white with full opacity.
+pub const WHITE: Color = Color::new(255, 255, 255, 255);

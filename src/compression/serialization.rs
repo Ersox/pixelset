@@ -15,27 +15,25 @@ impl Rectangle {
     }
 }
 
+fn build_dimension_table(values: impl Iterator<Item = u16>) -> (HashMap<u16, u8>, Vec<u16>) {
+    let mut map: HashMap<u16, u8> = HashMap::new();
+    let mut unique = Vec::new();
+    for value in values {
+        map.entry(value)
+            .or_insert_with(|| {
+                unique.push(value);
+                unique.len() as u8 - 1
+            });
+    }
+    (map, unique)
+}
+
 /// Serialize rectangles to raw binary format using dimension lookup tables.
 pub(super) fn to_bytes(rectangles: &[Rectangle]) -> Vec<u8> {
     let count = rectangles.len();
 
-    let mut width_map: HashMap<u16, u8> = HashMap::new();
-    let mut unique_widths = Vec::new();
-    for rect in rectangles {
-        if !width_map.contains_key(&rect.width) {
-            width_map.insert(rect.width, unique_widths.len() as u8);
-            unique_widths.push(rect.width);
-        }
-    }
-
-    let mut height_map: HashMap<u16, u8> = HashMap::new();
-    let mut unique_heights = Vec::new();
-    for rect in rectangles {
-        if !height_map.contains_key(&rect.height) {
-            height_map.insert(rect.height, unique_heights.len() as u8);
-            unique_heights.push(rect.height);
-        }
-    }
+    let (width_map, unique_widths) = build_dimension_table(rectangles.iter().map(|r| r.width));
+    let (height_map, unique_heights) = build_dimension_table(rectangles.iter().map(|r| r.height));
 
     let mut bytes = Vec::new();
 

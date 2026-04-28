@@ -75,4 +75,79 @@ impl PixelSet {
         applier(&mut set);
         set
     }
+
+    /// Returns the bounding box of this set as (min_x, min_y, max_x, max_y).
+    ///
+    /// Returns `None` if the set is empty.
+    ///
+    /// Complexity: `O(n)`.
+    pub fn bounds(&self) -> Option<(u16, u16, u16, u16)> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut min_x = u16::MAX;
+        let mut max_x = u16::MIN;
+        let mut min_y = u16::MAX;
+        let mut max_y = u16::MIN;
+
+        for &pixel in &self.pixels {
+            min_x = min_x.min(pixel.x);
+            max_x = max_x.max(pixel.x);
+            min_y = min_y.min(pixel.y);
+            max_y = max_y.max(pixel.y);
+        }
+
+        Some((min_x, min_y, max_x, max_y))
+    }
+
+    /// Returns the centroid (average position) of all pixels in this set.
+    ///
+    /// Returns `None` if the set is empty.
+    ///
+    /// Complexity: `O(n)`.
+    pub fn centroid(&self) -> Option<(f64, f64)> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut x_sum: u64 = 0;
+        let mut y_sum: u64 = 0;
+
+        for &pixel in &self.pixels {
+            x_sum += pixel.x as u64;
+            y_sum += pixel.y as u64;
+        }
+
+        let len = self.len() as f64;
+        Some((x_sum as f64 / len, y_sum as f64 / len))
+    }
+
+    /// Returns the pixel in this set closest to the given coordinates.
+    ///
+    /// Closest is determined by Euclidean distance. Returns `None` if the set is empty.
+    ///
+    /// Complexity: `O(n)`.
+    pub fn closest_to(&self, x: u16, y: u16) -> Option<Pixel> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut closest = self.pixels[0];
+        let dx = closest.x as i32 - x as i32;
+        let dy = closest.y as i32 - y as i32;
+        let mut min_dist_sq = (dx * dx + dy * dy) as u64;
+
+        for &pixel in &self.pixels[1..] {
+            let dx = pixel.x as i32 - x as i32;
+            let dy = pixel.y as i32 - y as i32;
+            let dist_sq = (dx * dx + dy * dy) as u64;
+            if dist_sq < min_dist_sq {
+                min_dist_sq = dist_sq;
+                closest = pixel;
+            }
+        }
+
+        Some(closest)
+    }
 }

@@ -23,7 +23,12 @@ pub trait Shape {
 
     /// Returns the total number of pixels in the shape.
     fn len(&self) -> usize;
-    
+
+    /// Returns `true` if the shape contains no pixels.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Checks if a given pixel is inside the shape.
     fn has(&self, pixel: Pixel) -> bool;
 }

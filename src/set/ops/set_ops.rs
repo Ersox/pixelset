@@ -1,20 +1,51 @@
-use std::ops::{BitAnd, BitOr, Sub};
-
 use crate::{Pixel, PixelSet};
 
 impl PixelSet {
     /// Returns `true` if every pixel in this set is also present in `other`.
     ///
-    /// Complexity: `O(n log m)`.
+    /// Complexity: `O(n + m)`.
     pub fn is_subset(&self, other: &PixelSet) -> bool {
-        self.into_iter().all(|pixel| other.has(*pixel))
+        let mut self_ind = 0;
+        let mut other_ind = 0;
+
+        while self_ind < self.len() && other_ind < other.len() {
+            let self_pixel = self.pixels[self_ind];
+            let other_pixel = other.pixels[other_ind];
+
+            if self_pixel < other_pixel {
+                return false;
+            } else if self_pixel > other_pixel {
+                other_ind += 1;
+            } else {
+                self_ind += 1;
+                other_ind += 1;
+            }
+        }
+
+        self_ind == self.len()
     }
 
     /// Returns `true` if this set shares any pixel with another set.
     ///
-    /// Complexity: `O(n log m)`.
+    /// Complexity: `O(n + m)`.
     pub fn intersects(&self, other: &Self) -> bool {
-        self.into_iter().any(|&pixel| other.has(pixel))
+        let mut self_ind = 0;
+        let mut other_ind = 0;
+
+        while self_ind < self.len() && other_ind < other.len() {
+            let self_pixel = self.pixels[self_ind];
+            let other_pixel = other.pixels[other_ind];
+
+            if self_pixel < other_pixel {
+                self_ind += 1;
+            } else if self_pixel > other_pixel {
+                other_ind += 1;
+            } else {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Inserts a single new pixel into the set while maintaining sorted
