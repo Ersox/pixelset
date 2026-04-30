@@ -1,8 +1,10 @@
-use std::collections::HashSet;
 use std::io::Result as IoResult;
+use rustc_hash::FxHashSet;
 use crate::{Pixel, PixelSet};
 use super::codec;
 use super::serialization::{self, Rectangle};
+
+mod packing;
 
 #[derive(Clone, Debug)]
 struct RectangleSet {
@@ -15,69 +17,36 @@ impl RectangleSet {
     }
 
     /// Convert a PixelSet to a RectangleSet using greedy rectangle packing.
-    /// Iterates through pixels in scanline order, expanding rectangles horizontally
-    /// and vertically as much as possible.
+    /// Iterates through pixels in scanline order, greedily expanding rectangles
+    /// horizontally and vertically as much as possible.
+    #[inline(never)]
     pub fn from_pixel_set(pixel_set: &PixelSet) -> Self {
         if pixel_set.is_empty() {
             return Self::new(vec![]);
         }
 
-        let pixels: Vec<Pixel> = pixel_set.iter().copied().collect();
-        let pixel_set_map: HashSet<Pixel> = pixels.iter().copied().collect();
-        let mut covered = vec![false; pixels.len()];
+        let rows = packing::build_row_index(pixel_set);
+        let pixels: Vec<Pixel> = {
+            let mut p: Vec<Pixel> = pixel_set.iter().copied().collect();
+            p.sort_unstable_by_key(|p| (p.y, p.x));
+            p
+        };
+
+        let mut covered: FxHashSet<Pixel> = FxHashSet::default();
         let mut rectangles = vec![];
 
-        for (i, &pixel) in pixels.iter().enumerate() {
-            if covered[i] {
+        for &pixel in &pixels {
+            if covered.contains(&pixel) {
                 continue;
             }
 
-            // Start a new rectangle at this pixel
             let start_x = pixel.x;
             let start_y = pixel.y;
 
-            // Find the maximum width by expanding right from this position on this row
-            let mut max_width = 1u16;
-            loop {
-                let next_x = start_x.saturating_add(max_width);
-                if next_x == u16::MAX || !pixel_set_map.contains(&Pixel::new(next_x, start_y)) {
-                    break;
-                }
-                max_width += 1;
-            }
+            let max_width = packing::expand_horizontally(start_x, start_y, &rows);
+            let height = packing::expand_vertically(start_x, start_y, max_width, &rows);
 
-            // Now try to expand downward, limited by the width we found
-            let mut height = 1u16;
-            'height_loop: loop {
-                let next_y = start_y.saturating_add(height);
-                if next_y == u16::MAX {
-                    break;
-                }
-
-                // Check if all pixels in the next row exist
-                for x_offset in 0..max_width {
-                    let target_x = start_x.saturating_add(x_offset);
-                    let target_pixel = Pixel::new(target_x, next_y);
-                    if !pixel_set_map.contains(&target_pixel) {
-                        break 'height_loop;
-                    }
-                }
-
-                height += 1;
-            }
-
-            // Mark all pixels in this rectangle as covered
-            for j in i..pixels.len() {
-                let p = pixels[j];
-                if p.x >= start_x
-                    && p.x < start_x.saturating_add(max_width)
-                    && p.y >= start_y
-                    && p.y < start_y.saturating_add(height)
-                {
-                    covered[j] = true;
-                }
-            }
-
+            packing::mark_covered_pixels(&mut covered, start_x, start_y, max_width, height);
             rectangles.push(Rectangle::new(start_x, start_y, max_width, height));
         }
 
@@ -124,7 +93,6 @@ impl RectangleSet {
         let rectangles = serialization::from_bytes(bytes)?;
         Ok(Self::new(rectangles))
     }
-
 }
 
 /// Compress a PixelSet to compressed bytes using rectangle packing and zstd.
