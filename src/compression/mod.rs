@@ -5,11 +5,13 @@ mod rectangle_set;
 use std::io::Result as IoResult;
 use crate::PixelSet;
 
+use serde::{Serialize, Deserialize};
+
 /// A losslessly compressed PixelSet using rectangle packing and zstd.
 ///
 /// This type wraps compressed bytes that can be decompressed back to a PixelSet.
 /// Achieves 75-150x compression on regular geographic data.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CompressedPixelSet {
     bytes: Vec<u8>,
 }

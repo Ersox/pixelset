@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::Pixel;
 
 mod ops;
@@ -36,7 +38,7 @@ mod compress;
 /// 
 /// Highly optimized for set operations, only struggling with
 /// additions or removals of individual pixels.
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PixelSet {
     /// The list of pixels in this set, sorted (y, x).
     pixels: Vec<Pixel>

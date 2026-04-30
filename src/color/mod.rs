@@ -1,10 +1,12 @@
+use serde::{Deserialize, Serialize};
+
 use crate::color::error::ColorParseError;
 
 mod error;
 mod from;
 
 /// Represents a color with RGBA components.
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Color([ u8; 4 ]);
 
 impl Color {

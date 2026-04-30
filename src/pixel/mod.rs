@@ -1,5 +1,6 @@
 use std::hash::{Hash, Hasher};
 use image::{DynamicImage, GenericImage, GenericImageView};
+use serde::{Deserialize, Serialize};
 use crate::{PixelSet, Color};
 
 const OFFSETS: [(i32, i32); 8] = [
@@ -20,7 +21,7 @@ const OFFSETS: [(i32, i32); 8] = [
 /// A `Pixel` stores its position using unsigned `x` and `y` coordinates,
 /// implementing ordering (`Ord`, `PartialOrd`) such that pixels sort in
 /// row-major `(y, x)` order.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Pixel {
     /// The vertical coordinate of the pixel.
     pub y: u16,
