@@ -4,13 +4,17 @@ description = "High-performance pixel set for efficient set operations"
 license = "MIT"
 repository = "https://github.com/Ersox/pixelset"
 authors = ["Ersox"]
-version = "0.9.2"
+version = "0.9.3"
 edition = "2024"
 
 [dependencies]
+base64 = "0.22.1"
 image = "0.25.9"
 radsort = "0.1.1"
 rustc-hash = "2.1.2"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.17"
 zstd = "0.13.2"
+
+[dev-dependencies]
+serde_json = "1.0.128"

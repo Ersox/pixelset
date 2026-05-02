@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
 
 use crate::color::error::ColorParseError;
 
@@ -6,8 +6,28 @@ mod error;
 mod from;
 
 /// Represents a color with RGBA components.
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct Color([ u8; 4 ]);
+
+impl Serialize for Color {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let hex = format!("#{:02X}{:02X}{:02X}{:02X}", self.0[0], self.0[1], self.0[2], self.0[3]);
+        serializer.serialize_str(&hex)
+    }
+}
+
+impl<'de> Deserialize<'de> for Color {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        Color::hex(&s).map_err(serde::de::Error::custom)
+    }
+}
 
 impl Color {
     /// Creates a `Color` from RGBA components.
