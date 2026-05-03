@@ -113,7 +113,7 @@ impl PixelSet {
             let raw = img.as_raw();
             let query_bytes = [query.r(), query.g(), query.b(), query.a()];
 
-            let mut matching_pixels = Vec::new();
+            let mut matching_pixels = Vec::with_capacity(self.len().min((width * height) as usize / 100));
             for y in 0..height as u16 {
                 for x in 0..width as u16 {
                     let idx = (y as usize * width as usize + x as usize) * 4;

@@ -108,7 +108,8 @@ impl Shape for EllipseOutline {
     }
 
     fn set(&self) -> PixelSet {
-        let pixels: Vec<_> = self.iter_pixels().collect();
+        let mut pixels = Vec::with_capacity(self.len());
+        pixels.extend(self.iter_pixels());
         PixelSet::new_unchecked(pixels)
     }
 

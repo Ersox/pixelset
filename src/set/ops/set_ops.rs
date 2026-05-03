@@ -172,7 +172,7 @@ impl PixelSet {
     ///
     /// Complexity: `O(k1 + k2)`.
     pub fn and(&self, other: &Self) -> Self {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(self.runs.len().min(other.runs.len()));
         let mut self_idx = 0;
         let mut other_idx = 0;
 
@@ -221,7 +221,7 @@ impl PixelSet {
             return self.clone();
         }
 
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(self.runs.len() + other.runs.len());
         let mut self_idx = 0;
         let mut other_idx = 0;
 
@@ -236,7 +236,7 @@ impl PixelSet {
                 result.push(other_run);
                 other_idx += 1;
             } else {
-                let mut merged = Vec::new();
+                let mut merged = Vec::with_capacity(4);
                 let mut s_idx = self_idx;
                 let mut o_idx = other_idx;
 
@@ -310,7 +310,7 @@ impl PixelSet {
     ///
     /// Complexity: `O(k1 + k2)`.
     pub fn xor(&self, other: &Self) -> Self {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(self.runs.len() + other.runs.len());
         let mut self_idx = 0;
         let mut other_idx = 0;
 
@@ -382,7 +382,7 @@ impl PixelSet {
     ///
     /// Complexity: `O(k1 + k2)`.
     pub fn difference(&self, other: &Self) -> Self {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(self.runs.len());
         let mut self_idx = 0;
         let mut other_idx = 0;
 

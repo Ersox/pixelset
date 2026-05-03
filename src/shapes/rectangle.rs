@@ -1,4 +1,5 @@
 use crate::{Pixel, PixelSet, shapes::Shape};
+use crate::set::Run;
 
 /// Represents an axis-aligned filled rectangle with its pixels.
 ///
@@ -34,17 +35,19 @@ impl Rectangle {
     }
 }
 
-impl Shape for Rectangle {    
+impl Shape for Rectangle {
     fn set(&self) -> PixelSet {
-        let mut pixels = Vec::with_capacity(self.len());
+        let mut runs = Vec::with_capacity(self.height as usize);
 
         for y in self.y..(self.y + self.height) {
-            for x in self.x..(self.x + self.width) {
-                pixels.push(Pixel::new(x, y));
-            }
+            runs.push(Run {
+                y,
+                x_start: self.x,
+                length: self.width,
+            });
         }
 
-        PixelSet::new_unchecked(pixels)
+        PixelSet::from_runs_unchecked(runs)
     }
 
     fn iter_pixels(&self) -> impl Iterator<Item = Pixel> {
