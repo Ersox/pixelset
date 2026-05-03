@@ -6,18 +6,15 @@
 //!
 //! ## Core Types
 //!
-//! - **[`PixelSet`]**: A compact, sorted collection of 2D pixel coordinates optimized for fast
-//!   set operations, spatial queries, and iteration. Pixels are always stored in row-major `(y, x)`
-//!   order for cache efficiency and quick binary-search lookups.
+//! - **[`PixelSet`]**: A compact, run-length encoded collection of 2D pixel coordinates optimized
+//!   for fast set operations, spatial queries, and iteration. Uses horizontal run encoding for
+//!   O(k) memory and efficient operations where k is the number of runs.
 //!
 //! - **[`Pixel`]**: Represents a single 2D coordinate with `x` and `y` fields. Implements custom
 //!   ordering and hashing that preserves the `(y, x)` sort order used throughout the library.
 //!
 //! - **[`Color`]**: A simple RGBA color representation with methods for parsing hex codes,
 //!   blending, grayscale conversion, and optional random color generation (with `rand` feature).
-//!
-//! - **[`PixelCache`]**: A spatial cache that groups pixels into [`Rectangle`] containers,
-//!   allowing compact storage and fast conversion to `PixelSet`.
 //!
 //! ## Working with Shapes
 //!
@@ -56,25 +53,24 @@
 //!
 //! ## Design Philosophy
 //!
-//! **Performance-First**: Pixels are stored in sorted order, enabling:
-//! - `O(log n)` membership checks via binary search
-//! - `O(n)` set operations with linear scans
+//! **Performance-First**: Pixels are stored in run-length encoded form, enabling:
+//! - `O(log k)` membership checks via binary search on runs
+//! - `O(k)` set operations with linear scans over runs
 //! - Cache-friendly iteration in scanline order
 //!
-//! **Trade-offs**: While set operations are fast, adding/removing individual pixels
-//! is `O(n)` due to vector shifting. Use [`PixelCache`] or batch operations for
-//! bulk modifications.
+//! **Trade-offs**: Adding/removing individual pixels is `O(k)` due to run splitting/merging.
+//! For bulk modifications, batch the operations into a single set operation.
 //!
 //! ## Example
 //!
 //! ```ignore
 //! use image::DynamicImage;
-//! use pixelset::{Pixel, PixelSet, Color, shapes::Circle};
+//! use pixelset::{Pixel, PixelSet, Color, shapes::Ellipse};
 //!
 //! let mut image = DynamicImage::new_rgb8(100, 100);
 //!
-//! // Create a circular region
-//! let circle = Circle { x: 50, y: 50, radius: 25 };
+//! // Create a circular region (ellipse with equal width and height)
+//! let circle = Ellipse { x: 38, y: 38, width: 25, height: 25 };
 //! let circle_pixels = circle.set();
 //!
 //! // Fill with color

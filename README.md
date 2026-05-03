@@ -17,37 +17,38 @@ PixelSet::from_image(&image)
 
 ## Design
 
-Internally, `PixelSet` is a `Vec<Pixel>`, where a pixel is a 4-byte structure with `x` and `y` coordinates.
+`PixelSet` uses run-length encoding (RLE) to represent pixels efficiently. Instead of storing individual pixels, it stores horizontal runs of consecutive pixels—spans where all pixels on the same row have consecutive x-coordinates.
 
 ```rs
-pub struct Pixel {
+pub struct Run {
     pub y: u16,
-    pub x: u16,
+    pub x_start: u16,
+    pub length: u16,
 }
 ```
 
-To ensure its performance guarantees, `PixelSet` ensures that the list of provided pixels are sorted in row-major order `(y, x)`. 
+This encoding ensures excellent performance on coherent regions (common in image processing) while maintaining O(k) memory where k is the number of runs, vs O(n) for individual pixels.
 
-`PixelSet::new` runs in `O(n)` time, using radix sort and then deduplicating pixels after. If you're sure the initial set of pixels is sorted already, you can use `PixelSet::new_unchecked` to skip that step.
+`PixelSet::new` runs in `O(n)` time, using radix sort to organize pixels, deduplicating them, then performing single-pass RLE encoding. If you're sure the initial set of pixels is already sorted and deduplicated, you can use `PixelSet::new_unchecked` to skip that step.
 
 ### List Operations
 
-Membership checks (`PixelSet::has`) can be guaranteed in `O(log n)` time, using binary search.
+Membership checks (`PixelSet::has`) run in `O(log k)` time using binary search on runs.
 
-Adding or removing individual pixels from the set will take `O(n)`, since they have to be sorted into the existing structure. Instead, to add or remove multiple pixels, combine them into a set (with `PixelSet::new`), and then use a union or difference.
+Adding or removing individual pixels is `O(k)` due to run splitting and merging. For bulk modifications, combine pixels into a set (with `PixelSet::new`) and use set operations instead.
 
-`PixelSet::filter` (and similar utilities) allows for filtering a set without needing an intermediate iterator, instead providing another `PixelSet`.
+`PixelSet::filter` allows filtering a set without an intermediate iterator, returning another `PixelSet` directly.
 
 ### Set Operations
 
-`PixelSet` provides efficient `O(n)` implementations for the following set operations:
+`PixelSet` provides efficient `O(k)` implementations (where k is the number of runs) for:
 - Union (`PixelSet::or`), which provides all elements in either set.
 - Intersection (`PixelSet::and`), which provides all elements in both sets.
 - Difference (`PixelSet::difference`), which provides all elements from one set, except those of the other.
 - Symmetric Difference (`PixelSet::xor`), which provides all elements in either set, but not both.
 
-These are implemented efficiently through merge algorithms, so performance guarantees can be met.
+These are implemented via merge algorithms over runs, scaling with coherent regions rather than pixel count.
 
-### Efficient Caching
+### Compression
 
-For saving and loading complex sets with continuous areas, `PixelCache` can be used, which compresses the set into a list of continuous rectangles that can be easily loaded again. Saving into a cache may be expensive in performance, though.
+For serialization, use the `compress()` method to create a `CompressedPixelSet`, which applies zstd compression on top of RLE. This typically achieves 75-150x compression on geographic or coherent image data.
