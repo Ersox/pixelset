@@ -4,6 +4,19 @@ use radsort::sort_by_key;
 
 use crate::{Color, Pixel, PixelSet};
 
+fn rgba8_get(raw: &[u8], x: u16, y: u16, width: u32) -> Color {
+    let idx = (y as usize * width as usize + x as usize) * 4;
+    Color::new(raw[idx], raw[idx + 1], raw[idx + 2], raw[idx + 3])
+}
+
+fn rgba8_set(raw: &mut [u8], x: u16, y: u16, width: u32, color: Color) {
+    let idx = (y as usize * width as usize + x as usize) * 4;
+    raw[idx] = color.r();
+    raw[idx + 1] = color.g();
+    raw[idx + 2] = color.b();
+    raw[idx + 3] = color.a();
+}
+
 impl PixelSet {
     /// Applies a color-producing function to each pixel and writes the result to the image.
     ///
@@ -36,14 +49,25 @@ impl PixelSet {
     /// For each pixel, this reads its current color, passes it through the transformation
     /// function, and writes the result back only if the color changed.
     pub fn transform(&self, image: &mut DynamicImage, applier: impl Fn(Color) -> Color) {
-        for pixel in self {
-            let found_color = pixel.color(image);
-            let new_color = applier(found_color);
-
-            if new_color == found_color {
-                continue;
+        if let Some(img) = image.as_mut_rgba8() {
+            let width = img.width();
+            let raw = img.as_mut();
+            for pixel in self {
+                let found_color = rgba8_get(raw, pixel.x, pixel.y, width);
+                let new_color = applier(found_color);
+                if new_color != found_color {
+                    rgba8_set(raw, pixel.x, pixel.y, width, new_color);
+                }
             }
-            pixel.set(image, new_color);
+        } else {
+            for pixel in self {
+                let found_color = pixel.color(image);
+                let new_color = applier(found_color);
+                if new_color == found_color {
+                    continue;
+                }
+                pixel.set(image, new_color);
+            }
         }
     }
 
@@ -85,10 +109,27 @@ impl PixelSet {
     ///
     /// This is useful for flood-fill algorithms, dilation operations, or spatial expansion.
     pub fn neighbors(&self, image: &DynamicImage) -> Self {
-        let mut seen = FxHashSet::default();
+        let (w, h) = image.dimensions();
+        let (w, h) = (w as i32, h as i32);
+
+        const OFFSETS: [(i32, i32); 8] = [
+            (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1),
+        ];
+
+        let mut seen = FxHashSet::with_capacity_and_hasher(
+            self.len().saturating_mul(3),
+            Default::default(),
+        );
+
         for pixel in self.iter() {
-            for neighbor in pixel.neighbors(image) {
-                seen.insert(neighbor);
+            let x = pixel.x as i32;
+            let y = pixel.y as i32;
+            for (dx, dy) in OFFSETS {
+                let nx = x + dx;
+                let ny = y + dy;
+                if nx >= 0 && ny >= 0 && nx < w && ny < h {
+                    seen.insert(Pixel::new(nx as u16, ny as u16));
+                }
             }
         }
 

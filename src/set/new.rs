@@ -66,7 +66,7 @@ impl PixelSet {
             return vec![];
         }
 
-        let mut runs = Vec::new();
+        let mut runs = Vec::with_capacity(pixels.len());
         let mut current_y = pixels[0].y;
         let mut current_x_start = pixels[0].x;
         let mut current_length = 1u16;

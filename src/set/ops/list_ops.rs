@@ -36,11 +36,46 @@ impl PixelSet {
     /// The predicate function receives each pixel and should return `true` to include it
     /// in the result, or `false` to exclude it.
     pub fn filter(&self, predicate: impl Fn(Pixel) -> bool) -> Self {
-        let pixels: Vec<Pixel> = self
-            .iter()
-            .filter(|&pixel| predicate(pixel))
-            .collect();
-        Self::new_unchecked(pixels)
+        use crate::set::Run;
+
+        let mut runs = Vec::with_capacity(self.runs.len());
+
+        for run in &self.runs {
+            let end = run.x_end();
+            let mut x = run.x_start;
+            let mut seg_start: Option<u16> = None;
+
+            loop {
+                let passes = predicate(Pixel::new(x, run.y));
+                match (seg_start, passes) {
+                    (None, true) => seg_start = Some(x),
+                    (Some(s), false) => {
+                        runs.push(Run {
+                            y: run.y,
+                            x_start: s,
+                            length: x - s,
+                        });
+                        seg_start = None;
+                    }
+                    _ => {}
+                }
+
+                if x == end {
+                    break;
+                }
+                x += 1;
+            }
+
+            if let Some(s) = seg_start {
+                runs.push(Run {
+                    y: run.y,
+                    x_start: s,
+                    length: end - s + 1,
+                });
+            }
+        }
+
+        Self::from_runs_unchecked(runs)
     }
 
     /// Returns a new `PixelSet` containing only pixels whose colors satisfy the given predicate.
@@ -52,10 +87,20 @@ impl PixelSet {
         image: &DynamicImage,
         predicate: impl Fn(Color) -> bool,
     ) -> Self {
-        self.filter(|pixel| {
-            let color = image.get_pixel(pixel.x as u32, pixel.y as u32);
-            predicate(color.into())
-        })
+        if let Some(img) = image.as_rgba8() {
+            let width = img.width();
+            let raw = img.as_raw();
+            self.filter(|pixel| {
+                let idx = (pixel.y as usize * width as usize + pixel.x as usize) * 4;
+                let color = Color::new(raw[idx], raw[idx + 1], raw[idx + 2], raw[idx + 3]);
+                predicate(color)
+            })
+        } else {
+            self.filter(|pixel| {
+                let color = image.get_pixel(pixel.x as u32, pixel.y as u32);
+                predicate(color.into())
+            })
+        }
     }
 
     /// Returns a new `PixelSet` containing only pixels whose color in the provided image
@@ -63,7 +108,30 @@ impl PixelSet {
     ///
     /// This performs exact RGBA matching; colors must match on all four channels.
     pub fn select(&self, image: &DynamicImage, query: Color) -> Self {
-        self.filter_color(image, |color| color == query)
+        if let Some(img) = image.as_rgba8() {
+            let (width, height) = image.dimensions();
+            let raw = img.as_raw();
+            let query_bytes = [query.r(), query.g(), query.b(), query.a()];
+
+            let mut matching_pixels = Vec::new();
+            for y in 0..height as u16 {
+                for x in 0..width as u16 {
+                    let idx = (y as usize * width as usize + x as usize) * 4;
+                    if &raw[idx..idx + 4] == &query_bytes[..] {
+                        matching_pixels.push(Pixel::new(x, y));
+                    }
+                }
+            }
+
+            if matching_pixels.is_empty() {
+                return Self::empty();
+            }
+
+            let result = Self::new_unchecked(matching_pixels);
+            result.and(self)
+        } else {
+            self.filter_color(image, |color| color == query)
+        }
     }
 
     /// Returns a modified copy of this `PixelSet` after applying a transformation function.
