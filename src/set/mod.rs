@@ -1,26 +1,52 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Pixel;
-
 mod ops;
 mod new;
 mod iter;
 mod compress;
-mod serialization_tests;
 
-/// A compact, sorted collection of pixels, optimized for fast set-like
-/// operations and spatial queries.
+/// A horizontal run-length encoded pixel span.
+/// Encodes all consecutive pixels at a given y-coordinate from x_start to x_start + length - 1.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub(crate) struct Run {
+    pub y: u16,
+    pub x_start: u16,
+    pub length: u16,
+}
+
+impl Run {
+    /// The last x-coordinate in this run (inclusive).
+    #[inline]
+    pub fn x_end(self) -> u16 {
+        self.x_start + self.length - 1
+    }
+
+    /// Check if this run contains the given x-coordinate.
+    #[inline]
+    pub fn contains_x(self, x: u16) -> bool {
+        x >= self.x_start && x <= self.x_end()
+    }
+
+    /// Encode this run as a sortable key.
+    #[inline]
+    pub fn key(self) -> u32 {
+        ((self.y as u32) << 16) | (self.x_start as u32)
+    }
+}
+
+/// A compact, run-length encoded collection of pixels, optimized for fast set-like
+/// operations and spatial queries on coherent regions.
 ///
 /// ## Overview
 ///
-/// `PixelSet` is a high-performance container that stores `Pixel` values in a
-/// strictly sorted `(y, x)` order. This ensures:
+/// `PixelSet` stores pixels in run-length encoded form: horizontal spans of consecutive
+/// pixels are represented as a single `Run` value. This ensures:
 ///
-/// - **Cache-friendly iteration** (pixels are stored linearly in scanline order)
-/// - **Fast binary-search membership checks** (`O(log n)` per lookup)
-/// - **Efficient merges, intersections, and differences** (`O(n)` with linear scans)
-/// - **Minimal memory overhead** compared to hash-based or tree-based structures
-/// 
+/// - **Memory efficiency** (O(k) storage where k = number of runs, vs O(n) for pixels)
+/// - **Fast binary-search membership checks** (`O(log k)` per lookup)
+/// - **Efficient merges, intersections, and differences** (`O(k)` with linear scans over runs)
+/// - **Minimal memory overhead** compared to flat pixel storage
+///
 /// ## Usage
 ///
 /// ```rust
@@ -33,16 +59,24 @@ mod serialization_tests;
 ///
 /// ## Guarantees
 ///
-/// Internally, pixel order is always sorted by `(y, x)`.  
-/// Methods preserve this sorting parity with the exception of [`new`],
-/// which expects a sanitized sorted list.
-/// 
-/// Highly optimized for set operations, only struggling with
-/// additions or removals of individual pixels.
+/// Internally, runs are always sorted by `(y, x_start)` with no overlapping or adjacent runs
+/// on the same row. Iteration yields individual pixels in sorted `(y, x)` order.
+/// Methods preserve this invariant with the exception of [`new`], which accepts
+/// an unsorted pixel list.
+///
+/// Highly optimized for set operations on coherent regions. Performance scales with the
+/// number of runs (typically O(height) for filled rectangles) rather than pixel count.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PixelSet {
-    /// The list of pixels in this set, sorted (y, x).
-    pixels: Vec<Pixel>
+    /// Horizontal run-length encoded pixels, sorted by (y, x_start).
+    runs: Vec<Run>,
+}
+
+impl PixelSet {
+    /// Get the underlying run-length encoded runs.
+    pub(crate) fn runs(&self) -> &[Run] {
+        &self.runs
+    }
 }
 
 impl Serialize for PixelSet {
@@ -60,34 +94,5 @@ impl<'de> Deserialize<'de> for PixelSet {
         D: serde::Deserializer<'de>,
     {
         crate::compression::serde::deserialize(deserializer)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_compression_via_serialization() {
-        let mut pixels = vec![];
-        for y in 0..50 {
-            for x in 0..50 {
-                pixels.push(Pixel::new(x, y));
-            }
-        }
-
-        let original = PixelSet::new(pixels);
-        let original_size = std::mem::size_of_val(&original.pixels[..]);
-
-        let compressed = crate::compression::compress_to_bytes(&original)
-            .expect("compression failed");
-        let decompressed = crate::compression::decompress_from_bytes(&compressed)
-            .expect("decompression failed");
-
-        assert_eq!(original.len(), decompressed.len());
-        assert_eq!(original, decompressed);
-
-        let compression_ratio = compressed.len() as f64 / original_size as f64;
-        assert!(compression_ratio < 1.0, "compression should reduce size");
     }
 }

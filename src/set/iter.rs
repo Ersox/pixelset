@@ -1,42 +1,90 @@
-use std::slice::{Iter, IterMut};
-
 use crate::{Pixel, PixelSet};
+use crate::set::Run;
 
-impl<'a> IntoIterator for &'a PixelSet {
-    type Item = &'a Pixel;
-    type IntoIter = std::slice::Iter<'a, Pixel>;
+/// Iterator over pixels in a PixelSet, lazily expanding runs.
+pub struct Iter<'a> {
+    runs: std::slice::Iter<'a, Run>,
+    current: Option<(Run, u16)>,
+}
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.pixels.iter()
+impl<'a> Iterator for Iter<'a> {
+    type Item = Pixel;
+
+    fn next(&mut self) -> Option<Pixel> {
+        loop {
+            if let Some((run, x)) = &mut self.current {
+                if *x <= run.x_end() {
+                    let pixel = Pixel::new(*x, run.y);
+                    *x += 1;
+                    return Some(pixel);
+                }
+            }
+
+            self.current = self.runs.next().map(|&r| (r, r.x_start));
+            if self.current.is_none() {
+                return None;
+            }
+        }
     }
 }
 
-impl<'a> IntoIterator for &'a mut PixelSet {
-    type Item = &'a mut Pixel;
-    type IntoIter = std::slice::IterMut<'a, Pixel>;
+/// Consuming iterator over pixels in a PixelSet, lazily expanding runs.
+pub struct IntoIter {
+    runs: std::vec::IntoIter<Run>,
+    current: Option<(Run, u16)>,
+}
+
+impl Iterator for IntoIter {
+    type Item = Pixel;
+
+    fn next(&mut self) -> Option<Pixel> {
+        loop {
+            if let Some((run, x)) = &mut self.current {
+                if *x <= run.x_end() {
+                    let pixel = Pixel::new(*x, run.y);
+                    *x += 1;
+                    return Some(pixel);
+                }
+            }
+
+            self.current = self.runs.next().map(|r| (r, r.x_start));
+            if self.current.is_none() {
+                return None;
+            }
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a PixelSet {
+    type Item = Pixel;
+    type IntoIter = Iter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.pixels.iter_mut()
+        Iter {
+            runs: self.runs.iter(),
+            current: None,
+        }
     }
 }
 
 impl IntoIterator for PixelSet {
     type Item = Pixel;
-    type IntoIter = std::vec::IntoIter<Pixel>;
+    type IntoIter = IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.pixels.into_iter()
+        IntoIter {
+            runs: self.runs.into_iter(),
+            current: None,
+        }
     }
 }
 
 impl PixelSet {
-    /// Returns an iterator over immutable references to the pixels in this set.
-    pub fn iter(&self) -> Iter<'_, Pixel> {
-        self.pixels.iter()
-    }
-
-    /// Returns an iterator over mutable references to the pixels in this set.
-    pub fn iter_mut(&mut self) -> IterMut<'_, Pixel> {
-        self.pixels.iter_mut()
+    /// Returns an iterator over the pixels in this set.
+    pub fn iter(&self) -> Iter<'_> {
+        Iter {
+            runs: self.runs.iter(),
+            current: None,
+        }
     }
 }

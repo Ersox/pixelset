@@ -87,7 +87,7 @@ impl Pixel {
         let width = width as i32;
         let height = height as i32;
 
-        let mut pixels = vec![];
+        let mut pixels = Vec::with_capacity(8);
         for (dx, dy) in OFFSETS {
             let new_x = x + dx;
             let new_y = y + dy;
