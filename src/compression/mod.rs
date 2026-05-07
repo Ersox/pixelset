@@ -13,7 +13,7 @@ use base64::Engine;
 ///
 /// This type wraps compressed bytes that can be decompressed back to a PixelSet.
 /// Achieves 75-150x compression on regular geographic data.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompressedPixelSet {
     bytes: Vec<u8>,
 }

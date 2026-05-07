@@ -66,7 +66,7 @@ impl Run {
 ///
 /// Highly optimized for set operations on coherent regions. Performance scales with the
 /// number of runs (typically O(height) for filled rectangles) rather than pixel count.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PixelSet {
     /// Horizontal run-length encoded pixels, sorted by (y, x_start).
     runs: Vec<Run>,
