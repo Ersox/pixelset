@@ -88,6 +88,9 @@ pub mod color;
 pub mod direction;
 pub mod compression;
 
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
 pub use pixel::Pixel;
 pub use color::Color;
 pub use set::PixelSet;
