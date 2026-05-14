@@ -3,6 +3,25 @@ use image::{DynamicImage, GenericImageView};
 use crate::{Color, Pixel, PixelSet};
 
 impl PixelSet {
+    /// Returns the index of the run containing `pixel`, or `None`.
+    ///
+    /// Checks both the run at the partition point and the one before it, since a run
+    /// whose `x_start < pixel.x` may still contain the pixel.
+    #[inline]
+    pub(crate) fn find_run_for(&self, pixel: Pixel) -> Option<usize> {
+        let idx = self.runs.partition_point(|r| r.key() < pixel.key());
+
+        if idx < self.runs.len() && self.runs[idx].y == pixel.y && self.runs[idx].contains_x(pixel.x) {
+            return Some(idx);
+        }
+
+        if idx > 0 && self.runs[idx - 1].y == pixel.y && self.runs[idx - 1].contains_x(pixel.x) {
+            return Some(idx - 1);
+        }
+        
+        None
+    }
+
     /// Returns `true` if the set contains no pixels.
     pub fn is_empty(&self) -> bool {
         self.runs.is_empty()
@@ -13,15 +32,7 @@ impl PixelSet {
     ///
     /// Complexity: `O(log k)` where k is the number of runs.
     pub fn has(&self, pixel: Pixel) -> bool {
-        let key = ((pixel.y as u32) << 16) | (pixel.x as u32);
-        let idx = self.runs.partition_point(|r| r.key() <= key);
-
-        if idx == 0 {
-            return false;
-        }
-
-        let run = self.runs[idx - 1];
-        run.y == pixel.y && run.contains_x(pixel.x)
+        self.find_run_for(pixel).is_some()
     }
 
     /// Returns the number of pixels in this set.
@@ -109,26 +120,13 @@ impl PixelSet {
     /// This performs exact RGBA matching; colors must match on all four channels.
     pub fn select(&self, image: &DynamicImage, query: Color) -> Self {
         if let Some(img) = image.as_rgba8() {
-            let (width, height) = image.dimensions();
+            let width = img.width();
             let raw = img.as_raw();
             let query_bytes = [query.r(), query.g(), query.b(), query.a()];
-
-            let mut matching_pixels = Vec::with_capacity(self.len().min((width * height) as usize / 100));
-            for y in 0..height as u16 {
-                for x in 0..width as u16 {
-                    let idx = (y as usize * width as usize + x as usize) * 4;
-                    if &raw[idx..idx + 4] == &query_bytes[..] {
-                        matching_pixels.push(Pixel::new(x, y));
-                    }
-                }
-            }
-
-            if matching_pixels.is_empty() {
-                return Self::empty();
-            }
-
-            let result = Self::new_unchecked(matching_pixels);
-            result.and(self)
+            self.filter(|pixel| {
+                let idx = (pixel.y as usize * width as usize + pixel.x as usize) * 4;
+                raw[idx..idx + 4] == query_bytes
+            })
         } else {
             self.filter_color(image, |color| color == query)
         }

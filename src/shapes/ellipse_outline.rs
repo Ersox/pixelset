@@ -1,4 +1,4 @@
-use crate::{Pixel, PixelSet, shapes::Shape};
+use crate::{Pixel, shapes::Shape};
 
 /// Represents an ellipse border with adjustable stroke width.
 ///
@@ -36,21 +36,12 @@ pub struct EllipseOutline {
 }
 
 impl EllipseOutline {
-    fn inside_ellipse(
-        x: u16,
-        y: u16,
-        cx: f64,
-        cy: f64,
-        rx: f64,
-        ry: f64,
-    ) -> bool {
+    fn inside_ellipse(x: u16, y: u16, cx: f64, cy: f64, rx: f64, ry: f64) -> bool {
         if rx <= 0.0 || ry <= 0.0 {
             return false;
         }
-
         let dx = x as f64 + 0.5 - cx;
         let dy = y as f64 + 0.5 - cy;
-
         (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0
     }
 }
@@ -59,19 +50,12 @@ impl Shape for EllipseOutline {
     fn has(&self, pixel: Pixel) -> bool {
         let Pixel { x, y } = pixel;
 
-        let x0 = self.x;
-        let y0 = self.y;
-        let x1 = self.x + self.width;
-        let y1 = self.y + self.height;
-
-        if x < x0 || x >= x1 || y < y0 || y >= y1 {
+        if x < self.x || x >= self.x + self.width || y < self.y || y >= self.y + self.height {
             return false;
         }
 
-        // Outer ellipse
-        let cx = x0 as f64 + self.width as f64 / 2.0;
-        let cy = y0 as f64 + self.height as f64 / 2.0;
-
+        let cx = self.x as f64 + self.width as f64 / 2.0;
+        let cy = self.y as f64 + self.height as f64 / 2.0;
         let rx = self.width as f64 / 2.0;
         let ry = self.height as f64 / 2.0;
 
@@ -79,7 +63,6 @@ impl Shape for EllipseOutline {
             return false;
         }
 
-        // Inner ellipse (shrunk by stroke)
         let inner_w = self.width.saturating_sub(self.stroke * 2);
         let inner_h = self.height.saturating_sub(self.stroke * 2);
 
@@ -87,10 +70,7 @@ impl Shape for EllipseOutline {
             return true;
         }
 
-        let irx = inner_w as f64 / 2.0;
-        let iry = inner_h as f64 / 2.0;
-
-        !Self::inside_ellipse(x, y, cx, cy, irx, iry)
+        !Self::inside_ellipse(x, y, cx, cy, inner_w as f64 / 2.0, inner_h as f64 / 2.0)
     }
 
     fn iter_pixels(&self) -> impl Iterator<Item = Pixel> {
@@ -105,23 +85,5 @@ impl Shape for EllipseOutline {
                 self.has(p).then_some(p)
             })
         })
-    }
-
-    fn set(&self) -> PixelSet {
-        let mut pixels = Vec::with_capacity(self.len());
-        pixels.extend(self.iter_pixels());
-        PixelSet::new_unchecked(pixels)
-    }
-
-    fn len(&self) -> usize {
-        // Same reasoning as RectangleOutline: outer minus inner area
-        let outer = self.width as usize * self.height as usize;
-
-        let inner_w = self.width.saturating_sub(self.stroke * 2) as usize;
-        let inner_h = self.height.saturating_sub(self.stroke * 2) as usize;
-
-        let inner = inner_w * inner_h;
-
-        outer - inner
     }
 }

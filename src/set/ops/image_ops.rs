@@ -3,6 +3,7 @@ use rustc_hash::FxHashSet;
 use radsort::sort_by_key;
 
 use crate::{Color, Pixel, PixelSet};
+use crate::pixel::OFFSETS;
 
 fn rgba8_get(raw: &[u8], x: u16, y: u16, width: u32) -> Color {
     let idx = (y as usize * width as usize + x as usize) * 4;
@@ -82,10 +83,6 @@ impl PixelSet {
         let (width, height) = image.dimensions();
         let (width, height) = (width as i32, height as i32);
 
-        const OFFSETS: [(i32, i32); 8] = [
-            (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1),
-        ];
-
         self.filter(|pixel| {
             let x = pixel.x as i32;
             let y = pixel.y as i32;
@@ -111,10 +108,6 @@ impl PixelSet {
     pub fn neighbors(&self, image: &DynamicImage) -> Self {
         let (w, h) = image.dimensions();
         let (w, h) = (w as i32, h as i32);
-
-        const OFFSETS: [(i32, i32); 8] = [
-            (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1),
-        ];
 
         let mut seen = FxHashSet::with_capacity_and_hasher(
             self.len().saturating_mul(3),

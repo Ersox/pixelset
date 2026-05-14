@@ -51,6 +51,39 @@ fn test_add_duplicate() {
     assert_eq!(set.len(), 2, "Duplicate should be ignored");
 }
 
+// Regression tests for a bug where adding a pixel already covered by a run whose
+// x_start < pixel.x was not caught by the early-return check, causing an overlapping
+// run to be inserted and breaking the non-overlapping RLE invariant.
+#[test]
+fn test_add_duplicate_interior_of_run() {
+    // Run covers x=3..=7. Adding x=5 (interior, not x_start) should be a no-op.
+    let mut set = PixelSet::new(vec![
+        Pixel::new(5, 3), Pixel::new(5, 4), Pixel::new(5, 5),
+        Pixel::new(5, 6), Pixel::new(5, 7),
+    ]);
+    assert_eq!(set.len(), 5);
+
+    set.add(Pixel::new(5, 5));
+
+    set.validate_invariants().expect("ADD result has invalid invariants");
+    assert_eq!(set.len(), 5, "Adding pixel interior to a run should be a no-op");
+}
+
+#[test]
+fn test_add_duplicate_end_of_run() {
+    // Run covers x=3..=7. Adding x=7 (x_end, not x_start) should be a no-op.
+    let mut set = PixelSet::new(vec![
+        Pixel::new(5, 3), Pixel::new(5, 4), Pixel::new(5, 5),
+        Pixel::new(5, 6), Pixel::new(5, 7),
+    ]);
+    assert_eq!(set.len(), 5);
+
+    set.add(Pixel::new(5, 7));
+
+    set.validate_invariants().expect("ADD result has invalid invariants");
+    assert_eq!(set.len(), 5, "Adding pixel at end of a run should be a no-op");
+}
+
 #[test]
 fn test_discard_from_middle() {
     let mut set = PixelSet::new(vec![

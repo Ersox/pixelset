@@ -1,4 +1,4 @@
-use crate::{Pixel, PixelSet, shapes::Shape};
+use crate::{Pixel, shapes::Shape};
 
 /// Represents a rectangular border with adjustable stroke width.
 ///
@@ -35,13 +35,12 @@ impl Shape for RectangleOutline {
     fn has(&self, pixel: Pixel) -> bool {
         let Pixel { x, y } = pixel;
 
-        let outer =
-            x >= self.x &&
-            x < self.x + self.width &&
-            y >= self.y &&
-            y < self.y + self.height;
+        let in_outer = x >= self.x
+            && x < self.x + self.width
+            && y >= self.y
+            && y < self.y + self.height;
 
-        if !outer {
+        if !in_outer {
             return false;
         }
 
@@ -50,15 +49,14 @@ impl Shape for RectangleOutline {
         let inner_w = self.width.saturating_sub(self.stroke * 2);
         let inner_h = self.height.saturating_sub(self.stroke * 2);
 
-        let inner =
-            inner_w > 0 &&
-            inner_h > 0 &&
-            x >= inner_x &&
-            x < inner_x + inner_w &&
-            y >= inner_y &&
-            y < inner_y + inner_h;
+        let in_inner = inner_w > 0
+            && inner_h > 0
+            && x >= inner_x
+            && x < inner_x + inner_w
+            && y >= inner_y
+            && y < inner_y + inner_h;
 
-        !inner
+        !in_inner
     }
 
     fn iter_pixels(&self) -> impl Iterator<Item = Pixel> {
@@ -75,20 +73,11 @@ impl Shape for RectangleOutline {
         })
     }
 
-    fn set(&self) -> PixelSet {
-        let mut pixels = Vec::with_capacity(self.len());
-        pixels.extend(self.iter_pixels());
-        PixelSet::new_unchecked(pixels)
-    }
-
+    /// Exact formula: outer area minus inner area.
     fn len(&self) -> usize {
         let outer = self.width as usize * self.height as usize;
-
         let inner_w = self.width.saturating_sub(self.stroke * 2) as usize;
         let inner_h = self.height.saturating_sub(self.stroke * 2) as usize;
-
-        let inner = inner_w * inner_h;
-
-        outer - inner
+        outer - inner_w * inner_h
     }
 }

@@ -3,7 +3,7 @@ use image::{DynamicImage, GenericImage, GenericImageView};
 use serde::{Deserialize, Serialize};
 use crate::{PixelSet, Color};
 
-const OFFSETS: [(i32, i32); 8] = [
+pub(crate) const OFFSETS: [(i32, i32); 8] = [
     (-1, -1), 
     (0, -1), 
     (1, -1),

@@ -1,38 +1,48 @@
 use crate::{Pixel, PixelSet};
 use crate::set::Run;
 
+/// Push `run` onto `runs`, merging with the last run if they are adjacent on the same row.
+fn push_run(runs: &mut Vec<Run>, run: Run) {
+    if let Some(last) = runs.last_mut()
+        && last.y == run.y && last.x_start + last.length == run.x_start
+    {
+        last.length += run.length;
+        return;
+    }
+    runs.push(run);
+}
+
 impl PixelSet {
     /// Returns `true` if every pixel in this set is also present in `other`.
     ///
     /// Complexity: `O(k1 + k2)` where k1, k2 are the number of runs in each set.
     pub fn is_subset(&self, other: &PixelSet) -> bool {
-        let mut self_idx = 0;
         let mut other_idx = 0;
 
-        while self_idx < self.runs.len() && other_idx < other.runs.len() {
-            let self_run = self.runs[self_idx];
-            let other_run = other.runs[other_idx];
-
-            if self_run.y < other_run.y {
-                return false;
-            } else if self_run.y > other_run.y {
+        for self_run in &self.runs {
+            // Advance past other runs on earlier rows.
+            while other_idx < other.runs.len() && other.runs[other_idx].y < self_run.y {
                 other_idx += 1;
-            } else {
-                if !other.runs[other_idx..].iter().any(|&r| {
-                    r.y == self_run.y
-                        && r.x_start <= self_run.x_start
-                        && r.x_end() >= self_run.x_end()
-                }) {
-                    return false;
-                }
-                self_idx += 1;
-                while other_idx < other.runs.len() && other.runs[other_idx].y == self_run.y {
-                    other_idx += 1;
-                }
+            }
+            // Advance past other runs on the same row that end before self_run starts.
+            while other_idx < other.runs.len()
+                && other.runs[other_idx].y == self_run.y
+                && other.runs[other_idx].x_end() < self_run.x_start
+            {
+                other_idx += 1;
+            }
+
+            if other_idx >= other.runs.len() || other.runs[other_idx].y != self_run.y {
+                return false;
+            }
+
+            let cover = other.runs[other_idx];
+            if cover.x_start > self_run.x_start || cover.x_end() < self_run.x_end() {
+                return false;
             }
         }
 
-        self_idx == self.runs.len()
+        true
     }
 
     /// Returns `true` if this set shares any pixel with another set.
@@ -70,12 +80,11 @@ impl PixelSet {
     ///
     /// Worst-case complexity: `O(k)` due to run insertion/splitting.
     pub fn add(&mut self, pixel: Pixel) {
-        let key = pixel.key();
-        let idx = self.runs.partition_point(|r| r.key() < key);
-
-        if idx < self.runs.len() && self.runs[idx].y == pixel.y && self.runs[idx].contains_x(pixel.x) {
+        if self.find_run_for(pixel).is_some() {
             return;
         }
+
+        let idx = self.runs.partition_point(|r| r.key() < pixel.key());
 
         let prev_run = idx.checked_sub(1).and_then(|i| {
             if self.runs[i].y == pixel.y {
@@ -135,16 +144,9 @@ impl PixelSet {
     ///
     /// Worst-case complexity: `O(k)` due to run splitting.
     pub fn discard(&mut self, pixel: Pixel) {
-        let key = pixel.key();
-        let idx = self.runs.partition_point(|r| r.key() < key);
-
-        // Check if pixel is in the run at idx, or in the previous run (if it shares the same y)
-        let run_idx = if idx < self.runs.len() && self.runs[idx].y == pixel.y && self.runs[idx].contains_x(pixel.x) {
-            idx
-        } else if idx > 0 && self.runs[idx - 1].y == pixel.y && self.runs[idx - 1].contains_x(pixel.x) {
-            idx - 1
-        } else {
-            return;
+        let run_idx = match self.find_run_for(pixel) {
+            Some(i) => i,
+            None => return,
         };
 
         let run = &mut self.runs[run_idx];
@@ -319,10 +321,10 @@ impl PixelSet {
             let b = other.runs[other_idx];
 
             if a.y < b.y {
-                result.push(a);
+                push_run(&mut result, a);
                 self_idx += 1;
             } else if a.y > b.y {
-                result.push(b);
+                push_run(&mut result, b);
                 other_idx += 1;
             } else {
                 let mut a_x = a.x_start;
@@ -330,20 +332,12 @@ impl PixelSet {
 
                 while a_x <= a.x_end() && b_x <= b.x_end() {
                     if a_x < b_x {
-                        let end = (a.x_end()).min(b_x - 1);
-                        result.push(Run {
-                            y: a.y,
-                            x_start: a_x,
-                            length: end - a_x + 1,
-                        });
+                        let end = a.x_end().min(b_x - 1);
+                        push_run(&mut result, Run { y: a.y, x_start: a_x, length: end - a_x + 1 });
                         a_x = end + 1;
                     } else if b_x < a_x {
-                        let end = (b.x_end()).min(a_x - 1);
-                        result.push(Run {
-                            y: a.y,
-                            x_start: b_x,
-                            length: end - b_x + 1,
-                        });
+                        let end = b.x_end().min(a_x - 1);
+                        push_run(&mut result, Run { y: a.y, x_start: b_x, length: end - b_x + 1 });
                         b_x = end + 1;
                     } else {
                         a_x += 1;
@@ -352,18 +346,10 @@ impl PixelSet {
                 }
 
                 if a_x <= a.x_end() {
-                    result.push(Run {
-                        y: a.y,
-                        x_start: a_x,
-                        length: a.x_end() - a_x + 1,
-                    });
+                    push_run(&mut result, Run { y: a.y, x_start: a_x, length: a.x_end() - a_x + 1 });
                 }
                 if b_x <= b.x_end() {
-                    result.push(Run {
-                        y: a.y,
-                        x_start: b_x,
-                        length: b.x_end() - b_x + 1,
-                    });
+                    push_run(&mut result, Run { y: a.y, x_start: b_x, length: b.x_end() - b_x + 1 });
                 }
 
                 self_idx += 1;
@@ -371,8 +357,12 @@ impl PixelSet {
             }
         }
 
-        result.extend_from_slice(&self.runs[self_idx..]);
-        result.extend_from_slice(&other.runs[other_idx..]);
+        for run in &self.runs[self_idx..] {
+            push_run(&mut result, *run);
+        }
+        for run in &other.runs[other_idx..] {
+            push_run(&mut result, *run);
+        }
 
         Self::from_runs_unchecked(result)
     }

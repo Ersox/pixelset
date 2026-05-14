@@ -4,7 +4,7 @@ use crate::{Pixel, PixelSet};
 use crate::compression::CompressedPixelSet;
 use super::compressed_pixel_set::WasmCompressedPixelSet;
 
-/// A single 2D pixel coordinate with `y` (row) and `x` (column) fields.
+/// A single 2D pixel coordinate with `x` (column) and `y` (row) fields.
 /// Coordinates are zero-indexed and limited to `u16` (0–65535).
 #[wasm_bindgen]
 pub struct WasmPixel {
@@ -13,10 +13,10 @@ pub struct WasmPixel {
 
 #[wasm_bindgen]
 impl WasmPixel {
-    /// Create a pixel at the given row and column.
+    /// Create a pixel at the given column (`x`) and row (`y`).
     #[wasm_bindgen(constructor)]
-    pub fn new(y: u16, x: u16) -> WasmPixel {
-        WasmPixel { inner: Pixel { y, x } }
+    pub fn new(x: u16, y: u16) -> WasmPixel {
+        WasmPixel { inner: Pixel::new(x, y) }
     }
 
     /// Row index (y-axis).
@@ -157,7 +157,7 @@ impl WasmPixelSet {
     /// Bounding box as `[min_y, min_x, max_y, max_x]`, or an empty array if the set is empty.
     pub fn bounds(&self) -> Box<[u16]> {
         match self.inner.bounds() {
-            Some((min_y, min_x, max_y, max_x)) => vec![min_y, min_x, max_y, max_x].into_boxed_slice(),
+            Some((min_x, min_y, max_x, max_y)) => vec![min_y, min_x, max_y, max_x].into_boxed_slice(),
             None => vec![].into_boxed_slice(),
         }
     }

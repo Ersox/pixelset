@@ -52,7 +52,7 @@ Runs are always kept **sorted by `(y, x_start)`**, non-overlapping, and non-adja
 
 - `src/compression/` — `CompressedPixelSet` type with zstd compression over the binary RLE format; also handles `Serialize`/`Deserialize` for `PixelSet` itself (human-readable → base64, binary → raw bytes)
 
-- `src/shapes/` — `Shape` trait + `Rectangle`, `RectangleOutline`, `Ellipse`, `EllipseOutline`; each generates a `PixelSet` directly without intermediate pixel lists where possible
+- `src/shapes/` — `Shape` trait + `Rectangle`, `RectangleOutline`, `Ellipse`, `EllipseOutline`. The `Shape` trait provides default implementations of `set()` (via `iter_pixels().collect()`), `len()` (via `iter_pixels().count()`), and `is_empty()`. Only `Rectangle` overrides `set()` to build runs directly (O(height)); others fall through to the defaults. When adding a new shape, you must implement `has()` and `iter_pixels()` — everything else is optional.
 
 - `src/pixel/` — `Pixel` struct with `(y, x)` sort key (y-major ordering used everywhere)
 - `src/color/` — `Color` RGBA type with hex parsing, blending, grayscale

@@ -128,6 +128,23 @@ fn test_xor_disjoint_sets() {
 }
 
 #[test]
+fn test_xor_adjacent_output_runs_are_merged() {
+    // self has two runs on the same row with a gap; other fills exactly that gap.
+    // The xor result covers x=0..8 continuously — it must be one merged run, not three adjacent ones.
+    let set_a = PixelSet::new(vec![
+        Pixel::new(0, 5), Pixel::new(1, 5), Pixel::new(2, 5),
+        Pixel::new(6, 5), Pixel::new(7, 5), Pixel::new(8, 5),
+    ]);
+    let set_b = PixelSet::new(vec![
+        Pixel::new(3, 5), Pixel::new(4, 5), Pixel::new(5, 5),
+    ]);
+
+    let result = set_a.xor(&set_b);
+    result.validate_invariants().expect("XOR result has invalid invariants");
+    assert_eq!(result.len(), 9);
+}
+
+#[test]
 fn test_xor_overlapping_sets() {
     let set_a = PixelSet::new(vec![
         Pixel::new(0, 0), Pixel::new(1, 0), Pixel::new(2, 0),
@@ -207,6 +224,23 @@ fn test_is_subset_true() {
     ]);
     let set_b = PixelSet::new(vec![
         Pixel::new(0, 0), Pixel::new(1, 0), Pixel::new(2, 0), Pixel::new(3, 0),
+    ]);
+
+    assert!(set_a.is_subset(&set_b));
+}
+
+#[test]
+fn test_is_subset_multiple_self_runs_same_row() {
+    // Regression: old code advanced other_idx past the row after the first self run,
+    // causing the second self run on the same row to always fail.
+    let set_a = PixelSet::new(vec![
+        Pixel::new(0, 0), Pixel::new(1, 0),
+        Pixel::new(5, 0), Pixel::new(6, 0),
+    ]);
+    let set_b = PixelSet::new(vec![
+        Pixel::new(0, 0), Pixel::new(1, 0), Pixel::new(2, 0),
+        Pixel::new(3, 0), Pixel::new(4, 0), Pixel::new(5, 0),
+        Pixel::new(6, 0), Pixel::new(7, 0),
     ]);
 
     assert!(set_a.is_subset(&set_b));

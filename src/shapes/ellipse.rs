@@ -1,4 +1,4 @@
-use crate::{Pixel, PixelSet, shapes::Shape};
+use crate::{Pixel, shapes::Shape};
 
 /// Represents a filled ellipse within a bounding box.
 ///
@@ -30,21 +30,6 @@ pub struct Ellipse {
 
 impl Shape for Ellipse {
     fn has(&self, pixel: Pixel) -> bool {
-        let Pixel { x, y } = pixel;
-
-        let x0 = self.x;
-        let y0 = self.y;
-        let x1 = self.x + self.width;
-        let y1 = self.y + self.height;
-
-        if x < x0 || x >= x1 || y < y0 || y >= y1 {
-            return false;
-        }
-
-        // Center of the ellipse
-        let cx = x0 as f64 + self.width as f64 / 2.0;
-        let cy = y0 as f64 + self.height as f64 / 2.0;
-
         let rx = self.width as f64 / 2.0;
         let ry = self.height as f64 / 2.0;
 
@@ -52,10 +37,17 @@ impl Shape for Ellipse {
             return false;
         }
 
-        let dx = x as f64 + 0.5 - cx;
-        let dy = y as f64 + 0.5 - cy;
+        let cx = self.x as f64 + rx;
+        let cy = self.y as f64 + ry;
 
-        (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0
+        let dx = pixel.x as f64 + 0.5 - cx;
+        let dy = pixel.y as f64 + 0.5 - cy;
+
+        pixel.x >= self.x
+            && pixel.x < self.x + self.width
+            && pixel.y >= self.y
+            && pixel.y < self.y + self.height
+            && (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0
     }
 
     fn iter_pixels(&self) -> impl Iterator<Item = Pixel> {
@@ -70,16 +62,5 @@ impl Shape for Ellipse {
                 self.has(p).then_some(p)
             })
         })
-    }
-
-    fn set(&self) -> PixelSet {
-        let mut pixels = Vec::with_capacity(self.len());
-        pixels.extend(self.iter_pixels());
-        PixelSet::new_unchecked(pixels)
-    }
-
-    fn len(&self) -> usize {
-        // Cheap upper bound; exact count requires scanning anyway
-        self.width as usize * self.height as usize
     }
 }
