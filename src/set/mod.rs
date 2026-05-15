@@ -21,16 +21,48 @@ impl Run {
         self.x_start + self.length - 1
     }
 
+    /// Construct a run from an inclusive x range.
+    #[inline]
+    pub fn from_span(y: u16, x_start: u16, x_end: u16) -> Self {
+        Self { y, x_start, length: x_end - x_start + 1 }
+    }
+
     /// Check if this run contains the given x-coordinate.
     #[inline]
     pub fn contains_x(self, x: u16) -> bool {
         x >= self.x_start && x <= self.x_end()
     }
 
+    /// Returns `true` if this run overlaps with `other` (both on the same row).
+    #[inline]
+    pub fn overlaps(self, other: Run) -> bool {
+        self.x_start <= other.x_end() && self.x_end() >= other.x_start
+    }
+
     /// Encode this run as a sortable key.
     #[inline]
     pub fn key(self) -> u32 {
         ((self.y as u32) << 16) | (self.x_start as u32)
+    }
+
+    /// Serialize to 6 bytes (little-endian y, x_start, length).
+    #[inline]
+    pub fn to_bytes(self) -> [u8; 6] {
+        let mut b = [0u8; 6];
+        b[0..2].copy_from_slice(&self.y.to_le_bytes());
+        b[2..4].copy_from_slice(&self.x_start.to_le_bytes());
+        b[4..6].copy_from_slice(&self.length.to_le_bytes());
+        b
+    }
+
+    /// Deserialize from 6 bytes (little-endian y, x_start, length).
+    #[inline]
+    pub fn from_bytes(b: &[u8; 6]) -> Self {
+        Self {
+            y: u16::from_le_bytes([b[0], b[1]]),
+            x_start: u16::from_le_bytes([b[2], b[3]]),
+            length: u16::from_le_bytes([b[4], b[5]]),
+        }
     }
 }
 

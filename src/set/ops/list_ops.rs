@@ -52,37 +52,21 @@ impl PixelSet {
         let mut runs = Vec::with_capacity(self.runs.len());
 
         for run in &self.runs {
-            let end = run.x_end();
-            let mut x = run.x_start;
             let mut seg_start: Option<u16> = None;
 
-            loop {
-                let passes = predicate(Pixel::new(x, run.y));
-                match (seg_start, passes) {
+            for x in run.x_start..=run.x_end() {
+                match (seg_start, predicate(Pixel::new(x, run.y))) {
                     (None, true) => seg_start = Some(x),
                     (Some(s), false) => {
-                        runs.push(Run {
-                            y: run.y,
-                            x_start: s,
-                            length: x - s,
-                        });
+                        runs.push(Run::from_span(run.y, s, x - 1));
                         seg_start = None;
                     }
                     _ => {}
                 }
-
-                if x == end {
-                    break;
-                }
-                x += 1;
             }
 
             if let Some(s) = seg_start {
-                runs.push(Run {
-                    y: run.y,
-                    x_start: s,
-                    length: end - s + 1,
-                });
+                runs.push(Run::from_span(run.y, s, run.x_end()));
             }
         }
 

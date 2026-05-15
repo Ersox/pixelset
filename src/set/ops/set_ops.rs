@@ -1,16 +1,12 @@
 use crate::{Pixel, PixelSet};
 use crate::set::Run;
+use super::run_ops::{difference_row_runs, end_of_row, merge_row_runs, push_run, xor_row_runs};
 
-/// Push `run` onto `runs`, merging with the last run if they are adjacent on the same row.
-fn push_run(runs: &mut Vec<Run>, run: Run) {
-    if let Some(last) = runs.last_mut()
-        && last.y == run.y && last.x_start + last.length == run.x_start
-    {
-        last.length += run.length;
-        return;
-    }
-    runs.push(run);
-}
+// All set operations below use the same merge-scan strategy: maintain one index into
+// `self.runs` and one into `other.runs`, and advance whichever points to the smaller `y`
+// (breaking ties by `x_start`). Because both lists are sorted by `(y, x_start)` and contain
+// no overlapping or adjacent runs, this single linear pass is sufficient to compare every
+// relevant pair of runs exactly once. Per-row logic is delegated to `run_ops`.
 
 impl PixelSet {
     /// Returns `true` if every pixel in this set is also present in `other`.
@@ -60,15 +56,12 @@ impl PixelSet {
                 self_idx += 1;
             } else if self_run.y > other_run.y {
                 other_idx += 1;
+            } else if self_run.overlaps(other_run) {
+                return true;
+            } else if self_run.x_end() < other_run.x_start {
+                self_idx += 1;
             } else {
-                if self_run.x_start <= other_run.x_end() && self_run.x_end() >= other_run.x_start {
-                    return true;
-                }
-                if self_run.x_end() < other_run.x_start {
-                    self_idx += 1;
-                } else {
-                    other_idx += 1;
-                }
+                other_idx += 1;
             }
         }
 
@@ -87,11 +80,7 @@ impl PixelSet {
         let idx = self.runs.partition_point(|r| r.key() < pixel.key());
 
         let prev_run = idx.checked_sub(1).and_then(|i| {
-            if self.runs[i].y == pixel.y {
-                Some(self.runs[i])
-            } else {
-                None
-            }
+            if self.runs[i].y == pixel.y { Some(self.runs[i]) } else { None }
         });
 
         let next_run = if idx < self.runs.len() && self.runs[idx].y == pixel.y {
@@ -102,11 +91,7 @@ impl PixelSet {
 
         match (prev_run, next_run) {
             (None, None) => {
-                self.runs.insert(idx, Run {
-                    y: pixel.y,
-                    x_start: pixel.x,
-                    length: 1,
-                });
+                self.runs.insert(idx, Run { y: pixel.y, x_start: pixel.x, length: 1 });
             }
             (Some(prev), None) if prev.x_end() + 1 == pixel.x => {
                 self.runs[idx - 1].length += 1;
@@ -118,24 +103,18 @@ impl PixelSet {
             (Some(prev), Some(next))
                 if prev.x_end() + 1 == pixel.x && pixel.x + 1 == next.x_start =>
             {
-                self.runs[idx - 1].length = next.x_end() - prev.x_start + 1;
+                self.runs[idx - 1] = Run::from_span(prev.y, prev.x_start, next.x_end());
                 self.runs.remove(idx);
             }
             (Some(prev), Some(_)) if prev.x_end() + 1 == pixel.x => {
-                // Extend prev even though next exists but isn't adjacent
                 self.runs[idx - 1].length += 1;
             }
             (Some(_), Some(next)) if pixel.x + 1 == next.x_start => {
-                // Prepend to next even though prev exists but isn't adjacent
                 self.runs[idx].x_start = pixel.x;
                 self.runs[idx].length += 1;
             }
             _ => {
-                self.runs.insert(idx, Run {
-                    y: pixel.y,
-                    x_start: pixel.x,
-                    length: 1,
-                });
+                self.runs.insert(idx, Run { y: pixel.y, x_start: pixel.x, length: 1 });
             }
         }
     }
@@ -159,11 +138,7 @@ impl PixelSet {
         } else if pixel.x == run.x_end() {
             run.length -= 1;
         } else {
-            let new_run = Run {
-                y: run.y,
-                x_start: pixel.x + 1,
-                length: run.x_end() - pixel.x,
-            };
+            let new_run = Run::from_span(run.y, pixel.x + 1, run.x_end());
             run.length = pixel.x - run.x_start;
             self.runs.insert(run_idx + 1, new_run);
         }
@@ -191,19 +166,12 @@ impl PixelSet {
                 let x_end = self_run.x_end().min(other_run.x_end());
 
                 if x_start <= x_end {
-                    result.push(Run {
-                        y: self_run.y,
-                        x_start,
-                        length: x_end - x_start + 1,
-                    });
+                    result.push(Run::from_span(self_run.y, x_start, x_end));
                 }
 
-                if self_run.x_end() < other_run.x_end() {
+                if self_run.x_end() <= other_run.x_end() {
                     self_idx += 1;
-                } else if self_run.x_end() > other_run.x_end() {
-                    other_idx += 1;
                 } else {
-                    self_idx += 1;
                     other_idx += 1;
                 }
             }
@@ -238,67 +206,17 @@ impl PixelSet {
                 result.push(other_run);
                 other_idx += 1;
             } else {
-                let mut merged = Vec::with_capacity(4);
-                let mut s_idx = self_idx;
-                let mut o_idx = other_idx;
-
-                // Determine which run comes first by x coordinate
-                let first_run = if self.runs[s_idx].x_start <= other.runs[o_idx].x_start {
-                    let r = self.runs[s_idx];
-                    s_idx += 1;
-                    r
-                } else {
-                    let r = other.runs[o_idx];
-                    o_idx += 1;
-                    r
-                };
-
-                let mut curr_x_start = first_run.x_start;
-                let mut curr_x_end = first_run.x_end();
-
-                while (s_idx < self.runs.len() || o_idx < other.runs.len())
-                    && (s_idx < self.runs.len() && self.runs[s_idx].y == self_run.y
-                        || o_idx < other.runs.len() && other.runs[o_idx].y == other_run.y)
-                {
-                    let next_run = if s_idx < self.runs.len()
-                        && self.runs[s_idx].y == self_run.y
-                        && (o_idx >= other.runs.len()
-                            || other.runs[o_idx].y != other_run.y
-                            || self.runs[s_idx].x_start <= other.runs[o_idx].x_start)
-                    {
-                        let r = self.runs[s_idx];
-                        s_idx += 1;
-                        r
-                    } else if o_idx < other.runs.len() && other.runs[o_idx].y == other_run.y {
-                        let r = other.runs[o_idx];
-                        o_idx += 1;
-                        r
-                    } else {
-                        break;
-                    };
-
-                    if next_run.x_start <= curr_x_end + 1 {
-                        curr_x_end = curr_x_end.max(next_run.x_end());
-                    } else {
-                        merged.push(Run {
-                            y: self_run.y,
-                            x_start: curr_x_start,
-                            length: curr_x_end - curr_x_start + 1,
-                        });
-                        curr_x_start = next_run.x_start;
-                        curr_x_end = next_run.x_end();
-                    }
-                }
-
-                merged.push(Run {
-                    y: self_run.y,
-                    x_start: curr_x_start,
-                    length: curr_x_end - curr_x_start + 1,
-                });
-
-                result.extend(merged);
-                self_idx = s_idx;
-                other_idx = o_idx;
+                let row_y = self_run.y;
+                let s_end = end_of_row(&self.runs, self_idx, row_y);
+                let o_end = end_of_row(&other.runs, other_idx, row_y);
+                merge_row_runs(
+                    &self.runs[self_idx..s_end],
+                    &other.runs[other_idx..o_end],
+                    row_y,
+                    &mut result,
+                );
+                self_idx = s_end;
+                other_idx = o_end;
             }
         }
 
@@ -327,33 +245,17 @@ impl PixelSet {
                 push_run(&mut result, b);
                 other_idx += 1;
             } else {
-                let mut a_x = a.x_start;
-                let mut b_x = b.x_start;
-
-                while a_x <= a.x_end() && b_x <= b.x_end() {
-                    if a_x < b_x {
-                        let end = a.x_end().min(b_x - 1);
-                        push_run(&mut result, Run { y: a.y, x_start: a_x, length: end - a_x + 1 });
-                        a_x = end + 1;
-                    } else if b_x < a_x {
-                        let end = b.x_end().min(a_x - 1);
-                        push_run(&mut result, Run { y: a.y, x_start: b_x, length: end - b_x + 1 });
-                        b_x = end + 1;
-                    } else {
-                        a_x += 1;
-                        b_x += 1;
-                    }
-                }
-
-                if a_x <= a.x_end() {
-                    push_run(&mut result, Run { y: a.y, x_start: a_x, length: a.x_end() - a_x + 1 });
-                }
-                if b_x <= b.x_end() {
-                    push_run(&mut result, Run { y: a.y, x_start: b_x, length: b.x_end() - b_x + 1 });
-                }
-
-                self_idx += 1;
-                other_idx += 1;
+                let row_y = a.y;
+                let s_end = end_of_row(&self.runs, self_idx, row_y);
+                let o_end = end_of_row(&other.runs, other_idx, row_y);
+                xor_row_runs(
+                    &self.runs[self_idx..s_end],
+                    &other.runs[other_idx..o_end],
+                    row_y,
+                    &mut result,
+                );
+                self_idx = s_end;
+                other_idx = o_end;
             }
         }
 
@@ -385,43 +287,9 @@ impl PixelSet {
 
             if other_idx >= other.runs.len() || other.runs[other_idx].y > self_run.y {
                 result.push(self_run);
-                self_idx += 1;
-                continue;
-            }
-
-            let mut self_x = self_run.x_start;
-            let mut curr_other_idx = other_idx;
-
-            while self_x <= self_run.x_end() && curr_other_idx < other.runs.len()
-                && other.runs[curr_other_idx].y == self_run.y
-            {
-                let other_run = other.runs[curr_other_idx];
-
-                if other_run.x_end() < self_x {
-                    curr_other_idx += 1;
-                    continue;
-                }
-
-                if self_x < other_run.x_start {
-                    let end = (self_run.x_end()).min(other_run.x_start - 1);
-                    result.push(Run {
-                        y: self_run.y,
-                        x_start: self_x,
-                        length: end - self_x + 1,
-                    });
-                    self_x = end + 1;
-                }
-
-                self_x = self_x.max(other_run.x_end() + 1);
-                curr_other_idx += 1;
-            }
-
-            if self_x <= self_run.x_end() {
-                result.push(Run {
-                    y: self_run.y,
-                    x_start: self_x,
-                    length: self_run.x_end() - self_x + 1,
-                });
+            } else {
+                let o_end = end_of_row(&other.runs, other_idx, self_run.y);
+                difference_row_runs(self_run, &other.runs[other_idx..o_end], &mut result);
             }
 
             self_idx += 1;

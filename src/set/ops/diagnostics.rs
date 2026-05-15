@@ -22,20 +22,18 @@ impl PixelSet {
             }
 
             // Check 2: No overlapping runs on same row
-            if prev.y == curr.y && prev.x_start + prev.length > curr.x_start {
+            if prev.y == curr.y && prev.x_end() >= curr.x_start {
                 return Err(format!(
                     "Overlap on row {}: [{},{}] overlaps [{},{}]",
-                    prev.y, prev.x_start, prev.x_start + prev.length - 1,
-                    curr.x_start, curr.x_start + curr.length - 1
+                    prev.y, prev.x_start, prev.x_end(), curr.x_start, curr.x_end()
                 ));
             }
 
             // Check 3: No adjacent runs on same row (should be merged)
-            if prev.y == curr.y && prev.x_start + prev.length == curr.x_start {
+            if prev.y == curr.y && prev.x_end() + 1 == curr.x_start {
                 return Err(format!(
                     "Adjacent on row {}: [{},{}] and [{},{}] should merge",
-                    prev.y, prev.x_start, prev.x_start + prev.length - 1,
-                    curr.x_start, curr.x_start + curr.length - 1
+                    prev.y, prev.x_start, prev.x_end(), curr.x_start, curr.x_end()
                 ));
             }
         }

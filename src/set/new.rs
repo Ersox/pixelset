@@ -71,9 +71,10 @@ impl PixelSet {
         let mut current_x_start = pixels[0].x;
         let mut current_length = 1u16;
 
-        for i in 1..pixels.len() {
-            let pixel = pixels[i];
-
+        for pixel in pixels.into_iter().skip(1) {
+            // A pixel extends the current run when it is on the same row and falls
+            // immediately after the run's last pixel (x_start + length). Any gap or
+            // row change flushes the current run and starts a new one.
             if pixel.y == current_y && pixel.x == current_x_start + current_length {
                 current_length += 1;
             } else {

@@ -56,10 +56,10 @@ fn test_add_duplicate() {
 // run to be inserted and breaking the non-overlapping RLE invariant.
 #[test]
 fn test_add_duplicate_interior_of_run() {
-    // Run covers x=3..=7. Adding x=5 (interior, not x_start) should be a no-op.
+    // Run covers x=3..=7 at y=5. Adding x=5 (interior, not x_start) should be a no-op.
     let mut set = PixelSet::new(vec![
-        Pixel::new(5, 3), Pixel::new(5, 4), Pixel::new(5, 5),
-        Pixel::new(5, 6), Pixel::new(5, 7),
+        Pixel::new(3, 5), Pixel::new(4, 5), Pixel::new(5, 5),
+        Pixel::new(6, 5), Pixel::new(7, 5),
     ]);
     assert_eq!(set.len(), 5);
 
@@ -71,17 +71,68 @@ fn test_add_duplicate_interior_of_run() {
 
 #[test]
 fn test_add_duplicate_end_of_run() {
-    // Run covers x=3..=7. Adding x=7 (x_end, not x_start) should be a no-op.
+    // Run covers x=3..=7 at y=5. Adding x=7 (x_end, not x_start) should be a no-op.
     let mut set = PixelSet::new(vec![
-        Pixel::new(5, 3), Pixel::new(5, 4), Pixel::new(5, 5),
-        Pixel::new(5, 6), Pixel::new(5, 7),
+        Pixel::new(3, 5), Pixel::new(4, 5), Pixel::new(5, 5),
+        Pixel::new(6, 5), Pixel::new(7, 5),
     ]);
     assert_eq!(set.len(), 5);
 
-    set.add(Pixel::new(5, 7));
+    set.add(Pixel::new(7, 5));
 
     set.validate_invariants().expect("ADD result has invalid invariants");
     assert_eq!(set.len(), 5, "Adding pixel at end of a run should be a no-op");
+}
+
+#[test]
+fn test_new_deduplicates_exact_duplicates() {
+    let set = PixelSet::new(vec![
+        Pixel::new(0, 0), Pixel::new(0, 0), Pixel::new(1, 0),
+    ]);
+
+    set.validate_invariants().expect("new() with duplicates has invalid invariants");
+    assert_eq!(set.len(), 2, "Duplicate pixels should be collapsed");
+    assert!(set.has(Pixel::new(0, 0)));
+    assert!(set.has(Pixel::new(1, 0)));
+}
+
+#[test]
+fn test_new_deduplicates_all_same_pixel() {
+    let set = PixelSet::new(vec![
+        Pixel::new(3, 7), Pixel::new(3, 7), Pixel::new(3, 7),
+    ]);
+
+    set.validate_invariants().expect("new() all-duplicate has invalid invariants");
+    assert_eq!(set.len(), 1);
+    assert!(set.has(Pixel::new(3, 7)));
+}
+
+#[test]
+fn test_new_deduplicates_unsorted_with_duplicates() {
+    // Pixels arrive unsorted and with duplicates; new() must sort then dedup.
+    let set = PixelSet::new(vec![
+        Pixel::new(2, 0), Pixel::new(0, 0), Pixel::new(1, 0),
+        Pixel::new(0, 0), Pixel::new(2, 0),
+    ]);
+
+    set.validate_invariants().expect("new() unsorted-with-duplicates has invalid invariants");
+    assert_eq!(set.len(), 3);
+    assert!(set.has(Pixel::new(0, 0)));
+    assert!(set.has(Pixel::new(1, 0)));
+    assert!(set.has(Pixel::new(2, 0)));
+}
+
+#[test]
+fn test_new_deduplicates_preserves_run_merging() {
+    // Duplicates shouldn't create phantom gaps that break run merging.
+    // x=0,1,2 are all present (with duplicates); the result must be one run of length 3.
+    let set = PixelSet::new(vec![
+        Pixel::new(0, 0), Pixel::new(1, 0), Pixel::new(0, 0),
+        Pixel::new(2, 0), Pixel::new(1, 0),
+    ]);
+
+    set.validate_invariants().expect("new() duplicate-with-run-merge has invalid invariants");
+    assert_eq!(set.len(), 3, "Three distinct pixels should form one run of length 3");
 }
 
 #[test]
